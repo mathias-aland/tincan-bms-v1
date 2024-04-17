@@ -17,6 +17,7 @@
 #include "bmsmodule.h"
 #include "globals.h"
 #include "i2c.h"
+#include "systick.h"
 
 enum {
 	MODBUS_STATE_WAITSTART = 0,			// waiting for start character (':')
@@ -577,10 +578,13 @@ uint8_t readRegs(uint16_t addr, uint16_t numRegs)
 	}
 	
 	
+	
 	modbus_buf[2] = numRegs * 2;	// number of data bytes to follow
 	modbus_buflen = 3 + (numRegs * 2);
 	
-	uint8_t modbus_buf_idx = 3;	// first data byte at pos 3
+	//uint8_t modbus_buf_idx = 3;	// first data byte at pos 3
+	
+	uint8_t *pModbus_buf = &modbus_buf[3];
 	
 	while (numRegs)
 	{
@@ -588,8 +592,8 @@ uint8_t readRegs(uint16_t addr, uint16_t numRegs)
 		if (addr == 99)
 		{
 			// number of modules			
-			modbus_buf[modbus_buf_idx++] = 0;	// MSB
-			modbus_buf[modbus_buf_idx++] = batt_get_module_cnt();	// LSB
+			*pModbus_buf++ = 0;	// MSB
+			*pModbus_buf++ = batt_get_module_cnt();	// LSB
 			
 		}
 		else if ((addr >= 100) && (addr <= 1699))
@@ -602,34 +606,34 @@ uint8_t readRegs(uint16_t addr, uint16_t numRegs)
 			{
 				// get module voltage
 				uint16_t modVolt = batt_get_module_volt(battPack);
-				modbus_buf[modbus_buf_idx++] = modVolt >> 8;	// MSB
-				modbus_buf[modbus_buf_idx++] = modVolt & 0xFF;	// LSB
+				*pModbus_buf++ = modVolt >> 8;	// MSB
+				*pModbus_buf++ = modVolt & 0xFF;	// LSB
 			}
 			else if ((valAddr >= 1) && (valAddr <= 6))
 			{
 				// get cell voltage
 				uint16_t cellVolt = batt_get_cell_volt(battPack, valAddr-1);
-				modbus_buf[modbus_buf_idx++] = cellVolt >> 8;	// MSB
-				modbus_buf[modbus_buf_idx++] = cellVolt & 0xFF;	// LSB
+				*pModbus_buf++ = cellVolt >> 8;	// MSB
+				*pModbus_buf++ = cellVolt & 0xFF;	// LSB
 			}
 			else if ((valAddr >= 7) && (valAddr <= 8))
 			{
 				// get temperature
 				int16_t temp = batt_get_temperature(battPack, valAddr-7);
-				modbus_buf[modbus_buf_idx++] = temp >> 8;	// MSB
-				modbus_buf[modbus_buf_idx++] = temp & 0xFF;	// LSB
+				*pModbus_buf++ = temp >> 8;	// MSB
+				*pModbus_buf++ = temp & 0xFF;	// LSB
 			}
 			else if (valAddr == 9)
 			{
 				// alerts, faults
-				modbus_buf[modbus_buf_idx++] = batt_get_module_alerts(battPack);	// MSB
-				modbus_buf[modbus_buf_idx++] = batt_get_module_faults(battPack);	// LSB
+				*pModbus_buf++ = batt_get_module_alerts(battPack);	// MSB
+				*pModbus_buf++ = batt_get_module_faults(battPack);	// LSB
 			}
 			else if (valAddr == 10)
 			{
 				// status, balance state
-				modbus_buf[modbus_buf_idx++] = batt_get_module_status(battPack);	// MSB
-				modbus_buf[modbus_buf_idx++] = batt_get_module_bal(battPack);	// LSB
+				*pModbus_buf++ = batt_get_module_status(battPack);	// MSB
+				*pModbus_buf++ = batt_get_module_bal(battPack);	// LSB
 			}
 			else
 			{
@@ -640,116 +644,435 @@ uint8_t readRegs(uint16_t addr, uint16_t numRegs)
 		else if (addr == MODBUS_INPUT_COMP_MCU_TEMP)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = 0;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.mcu_temp;		// LSB			
+			*pModbus_buf++ = 0;		// MSB
+			*pModbus_buf++ = comp_mcu_state.mcu_temp;		// LSB			
 		}
 		else if (addr == MODBUS_INPUT_COMP_V_SUPPLY)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.v_supply >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.v_supply & 0xFF;		// LSB
+			*pModbus_buf++ = comp_mcu_state.v_supply >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.v_supply & 0xFF;		// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_VDD)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.vdd >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.vdd & 0xFF;		// LSB
+			*pModbus_buf++ = comp_mcu_state.vdd >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.vdd & 0xFF;		// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_I_SENSE)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.i_sense >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.i_sense & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.i_sense >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.i_sense & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_CONT_MON)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.cont_mon >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.cont_mon & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.cont_mon >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.cont_mon & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_I_REF)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.i_ref >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.i_ref & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.i_ref >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.i_ref & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_I_DIAG)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.i_diag >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.i_diag & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.i_diag >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.i_diag & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_ESTOP_MON)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.estop_mon >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.estop_mon & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.estop_mon >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.estop_mon & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_IN1_V)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[0] >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[0] & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[0] >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[0] & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_IN2_V)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[1] >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[1] & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[1] >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[1] & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_IN3_V)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[2] >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[2] & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[2] >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[2] & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_IN4_V)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[3] >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[3] & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[3] >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[3] & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_IN5_V)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[4] >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[4] & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[4] >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[4] & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_IN6_V)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[5] >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[5] & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[5] >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[5] & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_IN7_V)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[6] >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[6] & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[6] >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[6] & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_IN8_V)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[7] >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.inp_v[7] & 0xFF;	// LSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[7] >> 8;		// MSB
+			*pModbus_buf++ = comp_mcu_state.inp_v[7] & 0xFF;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_OUT)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = 0;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.outp_state;	// LSB
+			*pModbus_buf++ = 0;		// MSB
+			*pModbus_buf++ = comp_mcu_state.outp_state;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_COMP_CONT_STATE)
 		{
 			// Read comp mcu state data
-			modbus_buf[modbus_buf_idx++] = 0;		// MSB
-			modbus_buf[modbus_buf_idx++] = comp_mcu_state.cont_state;	// LSB
+			*pModbus_buf++ = 0;		// MSB
+			*pModbus_buf++ = comp_mcu_state.cont_state;	// LSB
 		}
 		else if (addr == MODBUS_INPUT_CONT_LOCKOUT)
 		{
-			modbus_buf[modbus_buf_idx++] = cont_lockout >> 8;		// MSB
-			modbus_buf[modbus_buf_idx++] = cont_lockout & 0xFF;		// LSB
+			*pModbus_buf++ = cont_lockout >> 8;		// MSB
+			*pModbus_buf++ = cont_lockout & 0xFF;		// LSB
 		}
+		else if (addr == MODBUS_INPUT_BATT_COMM_OK_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = batt_comm_stats.uart_ok_cnt;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB	
+				numRegs--;		
+				addr++;	
+			}
+		}
+		
+		else if (addr == MODBUS_INPUT_BATT_COMM_BUF_OVF_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = batt_comm_stats.uart_buf_ovf_cnt;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_BATT_COMM_CRCERR_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = batt_comm_stats.uart_crcerr_cnt;
+			sei();
+			
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_BATT_COMM_DATAERR_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = batt_comm_stats.uart_dataerr_cnt;
+			sei();
+					
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+					
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_BATT_COMM_FERR_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = batt_comm_stats.uart_ferr_cnt;
+			sei();
+			
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_BATT_COMM_NOREPLY_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = batt_comm_stats.uart_noreply_cnt;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_BATT_COMM_OVF_CNT)
+		{
+			uint32_t tmp32;
+
+			cli();
+			tmp32 = batt_comm_stats.uart_ovf_cnt;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}	
+		else if (addr == MODBUS_INPUT_BATT_COMM_TIMEOUT_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = batt_comm_stats.uart_timeout_cnt;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}	
+		
+		else if (addr == MODBUS_INPUT_I2C_TRANSACTIONS)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = i2c_comm_stats.i2c_transactions;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_I2C_BUS_ERR_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = i2c_comm_stats.i2c_bus_err_cnt;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_I2C_NACK_ADDR_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = i2c_comm_stats.i2c_nack_addr;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_I2C_NACK_DATA_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = i2c_comm_stats.i2c_nack_data;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_I2C_UNKNOWN_IRQ_CNT)
+		{
+			uint32_t tmp32;
+			
+			cli();
+			tmp32 = i2c_comm_stats.i2c_unknown_irq;
+			sei();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_I2C_STUCK_SDA_CYCLES)
+		{
+			uint32_t tmp32;
+			
+			tmp32 = i2c_comm_stats.i2c_stuck_sda_cycles;
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_I2C_STUCK_SCL_CYCLES)
+		{
+			uint32_t tmp32;
+			
+			tmp32 = i2c_comm_stats.i2c_stuck_scl_cycles;
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_MAINLOOP_CYCLES)
+		{
+			uint32_t tmp32;
+			
+			tmp32 = mainloop_cycles;
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}
+		else if (addr == MODBUS_INPUT_SYSTICK)
+		{
+			uint32_t tmp32;
+			
+			tmp32 = SysTick_GetTicks();
+			
+			*pModbus_buf++ = tmp32 >> 24;		// MSB
+			*pModbus_buf++ = tmp32 >> 16;
+			
+			if (numRegs > 1)
+			{
+				*pModbus_buf++ = tmp32 >> 8;
+				*pModbus_buf++ = tmp32 & 0xFF;	// LSB
+				numRegs--;
+				addr++;	
+			}
+		}		
 		else
 		{
 			return MODBUS_ERR_ILLEGAL_DATA_ADDR;	// address not found

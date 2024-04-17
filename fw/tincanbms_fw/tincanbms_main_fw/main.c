@@ -416,7 +416,7 @@ uint8_t mainLogic_idle()
 	if ((batt_stats.numModulesPresent != 0) && (init == true))
 	{
 		chargerEnabled = check_charger_enable(acPresActive);
-		heaterState = check_heater_enable(chargerEnabled, ignActive);
+		heaterState = check_heater_enable(cont_lockout != 0, chargerEnabled, ignActive);
 		turtleActive = check_turtle_mode_enable();
 		regenLockout = check_regen_lockout();
 	}
@@ -479,7 +479,7 @@ uint8_t mainLogic_idle()
 		// Contactor locked out, or no modules found, or data not available yet
 		contactorEnabled = false;
 		driveEnabled = false;
-		chargerEnabled = false;
+		chargerEnabled = false;		
 	}
 	else
 	{
@@ -537,6 +537,12 @@ uint8_t mainLogic_idle()
 	
 	if (contactorEnabled)
 	{
+		
+		if (heaterState == HEATER_ENABLE_OFF)
+		{
+			// Force pump on when contactor is on
+			heaterState = HEATER_ENABLE_PUMP;
+		}
 		
 		if ((cont_step == 0) || (cont_step == 255))
 		{
@@ -771,6 +777,14 @@ uint8_t mainLogic_idle()
 		}
 	}
 	
+	
+	// Pump control output
+	if (heaterState != HEATER_ENABLE_OFF)
+	{
+		// Pump should be started
+		newOutputState |= setPumpOutput();
+	}	
+	
 	if (cont_step == 128)
 	{
 		// Contactor ON
@@ -800,6 +814,11 @@ uint8_t mainLogic_idle()
 			newOutputState |= setDriveEnableOutput();
 		}	
 		
+		// Heater control output
+		if (heaterState == HEATER_ENABLE_PUMP_HEAT)
+		{
+			newOutputState |= setHeaterOutput();
+		}			
 		
 	}
 	
@@ -807,19 +826,7 @@ uint8_t mainLogic_idle()
 	if (acPresActive)
 	{
 		newOutputState |= setChargerInterlockOutput();
-	}	
-	
-	// Pump/heater control output
-	if ((heaterState == HEATER_ENABLE_PUMP) || (heaterState == HEATER_ENABLE_PUMP_HEAT))
-	{
-		newOutputState |= setPumpOutput();
 	}
-	
-	if ((heaterState == HEATER_ENABLE_PUMP_HEAT) && (cont_step == 128))
-	{
-		newOutputState |= setHeaterOutput();
-	}	
-
 	
 	// Check engine output
 	if  ((((cont_lockout) || (batt_stats.numModulesPresent == 0)) && ignActive) || (!init))
@@ -835,17 +842,6 @@ uint8_t mainLogic_idle()
 	
 	return MAIN_STATE_IDLE;
 }
-
-
-void mainLogic()
-{
-	
-	
-
-
-}
-
-
 
 
 int main(void) {
@@ -1170,7 +1166,7 @@ int main(void) {
 		EE_writeParamsLoop();
 		
 		
-		
+		mainloop_cycles++;
 		
 	}
 }

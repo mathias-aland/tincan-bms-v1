@@ -53,7 +53,7 @@ uint16_t check_contactor_lockout(bool charge_mode);
 bool check_turtle_mode_enable();
 bool check_charger_enable(bool ac_present);
 bool check_regen_lockout();
-uint8_t check_heater_enable(bool chargerEn, bool ignOn);
+uint8_t check_heater_enable(bool contLockout, bool chargerEn, bool ignOn);
 bool reset_contactor_lockout();
 
 

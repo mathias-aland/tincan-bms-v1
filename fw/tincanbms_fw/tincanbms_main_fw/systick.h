@@ -16,4 +16,6 @@ void SysTick_Delay(uint32_t delayTicks);
 uint32_t SysTick_GetTicks(void);
 bool SysTick_CheckElapsed(uint32_t initialTicks, uint32_t delayTicks);
 
+extern volatile uint32_t systickTicks;
+
 #endif /* SYSTICK_H_ */

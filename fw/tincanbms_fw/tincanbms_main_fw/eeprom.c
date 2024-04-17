@@ -113,7 +113,7 @@ const __flash BMSLimits bms_limits_defaults = {
 	.contactorIdleDelay = 5,			// Time to wait before switching off HV contactor when HV is not needed anymore
 	
 	/* Misc */
-	.alertFaultMask = ((ALERT_FORCE | ALERT_TSD) << 8) | FAULT_SELFTEST | FAULT_FORCE,
+	.alertFaultMask = ((ALERT_AR | ALERT_PARITY | ALERT_ECC_ERR | ALERT_FORCE | ALERT_TSD | ALERT_SLEEP | ALERT_OT2 | ALERT_OT1) << 8) | FAULT_SELFTEST | FAULT_FORCE | FAULT_POR | FAULT_CUV | FAULT_COV,
 	//.alertMask = ALERT_FORCE | ALERT_TSD,
 	//.faultMask = FAULT_SELFTEST | FAULT_FORCE,
 	.gpoFunc = {[0] = GPO_FUNC_BATT_PUMP, [1] = GPO_FUNC_BATT_PUMP_PWM, [2] = GPO_FUNC_BATT_HEATER, [3] = GPO_FUNC_CHG_ENABLE, [4] = GPO_FUNC_REGEN_LOCKOUT, [5] = GPO_FUNC_DRIVE_ENABLE}

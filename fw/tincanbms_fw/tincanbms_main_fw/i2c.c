@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "i2c.h"
+#include "globals.h"
 
 //#define I2C_BAUD(F_SCL, T_RISE)   ((((((float)(F_CPU) / (float)(F_SCL))) - 10 - ((float)(F_CPU) * (T_RISE) / 1000000))) / 2)
 #define I2C_BAUD(freq, t_rise) ((F_CPU / freq) / 2) - (5 + (((F_CPU / 1000000) * t_rise) / 2000))
@@ -116,6 +117,8 @@ ISR(TWI0_TWIM_vect)
 		TWI0.MCTRLB = TWI_ACKACT_NACK_gc | TWI_MCMD_STOP_gc;
 		internal_status.busy = false;
 		internal_status.state = I2C_STATE_IDLE;
+		i2c_comm_stats.i2c_bus_err_cnt++;
+		
 		goto TWI_ISR_END;
 	}
 	else if (m_status & TWI_WIF_bm)
@@ -138,11 +141,13 @@ ISR(TWI0_TWIM_vect)
 			{
 				// address NACK
 				internal_status.errorState = I2C_ERROR_ADDR_NACK;
+				i2c_comm_stats.i2c_nack_addr++;
 			}
 			else
 			{
 				// data NACK
 				internal_status.errorState = I2C_ERROR_DATA_NACK;
+				i2c_comm_stats.i2c_nack_data++;
 			}
 			
 
@@ -180,6 +185,7 @@ ISR(TWI0_TWIM_vect)
 					TWI0.MCTRLB = TWI_MCMD_STOP_gc;	// Send STOP
 					internal_status.busy = false;
 					internal_status.state = I2C_STATE_IDLE;
+					i2c_comm_stats.i2c_transactions++;
 				}
 			}
 			
@@ -204,6 +210,7 @@ ISR(TWI0_TWIM_vect)
 			TWI0.MCTRLB = TWI_ACKACT_NACK_gc | TWI_MCMD_STOP_gc;
 			internal_status.busy = false;
 			internal_status.state = I2C_STATE_IDLE;
+			i2c_comm_stats.i2c_transactions++;
 		}
 		else
 		{
@@ -224,6 +231,7 @@ ISR(TWI0_TWIM_vect)
 		//printf("readLength = %u\n\r", internal_status.readLength);
 		
 		// IRQ fired but no flags set ???		
+		i2c_comm_stats.i2c_unknown_irq++;
 		goto TWI_ISR_END;
 	}
 	
@@ -470,6 +478,7 @@ void i2c_loop()
 		if ((PORTC.IN & PIN3_bm) == 0)
 		{
 			// SCL still low, wait
+			i2c_comm_stats.i2c_stuck_scl_cycles++;
 			return;
 		}
 		
@@ -482,6 +491,7 @@ void i2c_loop()
 			PORTC.DIRSET = PIN3_bm;	// pull SCL low
 			_delay_us(10);
 			PORTC.DIRCLR = PIN3_bm;	// release SCL
+			i2c_comm_stats.i2c_stuck_sda_cycles++;
 			return;	// don't take up too much CPU time, let other processes run and continue next cycle
 		}
 		

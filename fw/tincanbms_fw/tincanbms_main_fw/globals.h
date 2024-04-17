@@ -83,7 +83,34 @@ typedef struct
 	bool mains_present;
 } batt_stats_t;
 
+
+typedef struct
+{
+	uint32_t uart_ferr_cnt;
+	uint32_t uart_ovf_cnt;
+	uint32_t uart_timeout_cnt;
+	uint32_t uart_buf_ovf_cnt;
+	uint32_t uart_crcerr_cnt;
+	uint32_t uart_dataerr_cnt;
+	uint32_t uart_noreply_cnt;
+	uint32_t uart_ok_cnt;
+} batt_comm_stats_t;
+
+typedef struct
+{
+	uint32_t i2c_transactions;
+	uint32_t i2c_bus_err_cnt;
+	uint32_t i2c_nack_addr;
+	uint32_t i2c_nack_data;
+	uint32_t i2c_unknown_irq;
+	uint32_t i2c_stuck_sda_cycles;
+	uint32_t i2c_stuck_scl_cycles;
+} i2c_comm_stats_t;
+
+
 extern batt_stats_t batt_stats;
+
+
 extern BMSLimits bms_limits;
 
 extern uint8_t sim_numFoundModules;
@@ -97,5 +124,9 @@ extern int16_t sim_batt_current;
 extern bool sim_status_wr_en;
 
 extern uint16_t cont_lockout;
+
+extern volatile batt_comm_stats_t batt_comm_stats;
+extern volatile i2c_comm_stats_t i2c_comm_stats;
+extern volatile uint32_t mainloop_cycles;
 
 #endif /* GLOBALS_H_ */

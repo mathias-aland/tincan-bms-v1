@@ -30,25 +30,59 @@ namespace tincanbms_cfg
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.ListViewItem listViewItem1 = new System.Windows.Forms.ListViewItem("COMP_MCU_TEMP");
-            System.Windows.Forms.ListViewItem listViewItem2 = new System.Windows.Forms.ListViewItem("COMP_V_SUPPLY");
-            System.Windows.Forms.ListViewItem listViewItem3 = new System.Windows.Forms.ListViewItem("COMP_VDD");
-            System.Windows.Forms.ListViewItem listViewItem4 = new System.Windows.Forms.ListViewItem("COMP_I_SENSE");
-            System.Windows.Forms.ListViewItem listViewItem5 = new System.Windows.Forms.ListViewItem("COMP_CONT_MON");
-            System.Windows.Forms.ListViewItem listViewItem6 = new System.Windows.Forms.ListViewItem("COMP_I_REF");
-            System.Windows.Forms.ListViewItem listViewItem7 = new System.Windows.Forms.ListViewItem("COMP_I_DIAG");
-            System.Windows.Forms.ListViewItem listViewItem8 = new System.Windows.Forms.ListViewItem("COMP_ESTOP_MON");
-            System.Windows.Forms.ListViewItem listViewItem9 = new System.Windows.Forms.ListViewItem("COMP_IN1_V");
-            System.Windows.Forms.ListViewItem listViewItem10 = new System.Windows.Forms.ListViewItem("COMP_IN2_V");
-            System.Windows.Forms.ListViewItem listViewItem11 = new System.Windows.Forms.ListViewItem("COMP_IN3_V");
-            System.Windows.Forms.ListViewItem listViewItem12 = new System.Windows.Forms.ListViewItem("COMP_IN4_V");
-            System.Windows.Forms.ListViewItem listViewItem13 = new System.Windows.Forms.ListViewItem("COMP_IN5_V");
-            System.Windows.Forms.ListViewItem listViewItem14 = new System.Windows.Forms.ListViewItem("COMP_IN6_V");
-            System.Windows.Forms.ListViewItem listViewItem15 = new System.Windows.Forms.ListViewItem("COMP_IN7_V");
-            System.Windows.Forms.ListViewItem listViewItem16 = new System.Windows.Forms.ListViewItem("COMP_IN8_V");
-            System.Windows.Forms.ListViewItem listViewItem17 = new System.Windows.Forms.ListViewItem("COMP_OUT");
-            System.Windows.Forms.ListViewItem listViewItem18 = new System.Windows.Forms.ListViewItem("COMP_CONT_STATE");
-            System.Windows.Forms.ListViewItem listViewItem19 = new System.Windows.Forms.ListViewItem("CONT_LOCKOUT");
+            System.Windows.Forms.ListViewItem listViewItem1 = new System.Windows.Forms.ListViewItem(new string[] {
+            "UVP_CHG"}, -1, System.Drawing.Color.Empty, System.Drawing.Color.Empty, new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0))));
+            System.Windows.Forms.ListViewItem listViewItem2 = new System.Windows.Forms.ListViewItem("UVP");
+            System.Windows.Forms.ListViewItem listViewItem3 = new System.Windows.Forms.ListViewItem("OVP");
+            System.Windows.Forms.ListViewItem listViewItem4 = new System.Windows.Forms.ListViewItem("UTP");
+            System.Windows.Forms.ListViewItem listViewItem5 = new System.Windows.Forms.ListViewItem("OTP");
+            System.Windows.Forms.ListViewItem listViewItem6 = new System.Windows.Forms.ListViewItem("OCP");
+            System.Windows.Forms.ListViewItem listViewItem7 = new System.Windows.Forms.ListViewItem("OCP_PEAK");
+            System.Windows.Forms.ListViewItem listViewItem8 = new System.Windows.Forms.ListViewItem("PACK_FLT");
+            System.Windows.Forms.ListViewItem listViewItem9 = new System.Windows.Forms.ListViewItem("PACK_COMM");
+            System.Windows.Forms.ListViewItem listViewItem10 = new System.Windows.Forms.ListViewItem("PACK_FLT_HW");
+            System.Windows.Forms.ListViewItem listViewItem11 = new System.Windows.Forms.ListViewItem("ESTOP");
+            System.Windows.Forms.ListViewItem listViewItem12 = new System.Windows.Forms.ListViewItem("MCU_TIMEOUT");
+            System.Windows.Forms.ListViewItem listViewItem13 = new System.Windows.Forms.ListViewItem("NO_DATA");
+            System.Windows.Forms.ListViewItem listViewItem14 = new System.Windows.Forms.ListViewItem("MOD_COUNT");
+            System.Windows.Forms.ListViewItem listViewItem15 = new System.Windows.Forms.ListViewItem("NO_MODULES");
+            System.Windows.Forms.ListViewItem listViewItem16 = new System.Windows.Forms.ListViewItem("UNKNOWN_FLT");
+            System.Windows.Forms.ListViewItem listViewItem17 = new System.Windows.Forms.ListViewItem("Batt comm OK");
+            System.Windows.Forms.ListViewItem listViewItem18 = new System.Windows.Forms.ListViewItem("Batt comm CRC error");
+            System.Windows.Forms.ListViewItem listViewItem19 = new System.Windows.Forms.ListViewItem("Batt comm data error");
+            System.Windows.Forms.ListViewItem listViewItem20 = new System.Windows.Forms.ListViewItem("Batt comm framing error");
+            System.Windows.Forms.ListViewItem listViewItem21 = new System.Windows.Forms.ListViewItem("Batt comm UART overflow");
+            System.Windows.Forms.ListViewItem listViewItem22 = new System.Windows.Forms.ListViewItem("Batt comm buffer overflow");
+            System.Windows.Forms.ListViewItem listViewItem23 = new System.Windows.Forms.ListViewItem("Batt comm timeout");
+            System.Windows.Forms.ListViewItem listViewItem24 = new System.Windows.Forms.ListViewItem("Batt comm no reply");
+            System.Windows.Forms.ListViewItem listViewItem25 = new System.Windows.Forms.ListViewItem("I2C transaction OK");
+            System.Windows.Forms.ListViewItem listViewItem26 = new System.Windows.Forms.ListViewItem("I2C bus error");
+            System.Windows.Forms.ListViewItem listViewItem27 = new System.Windows.Forms.ListViewItem("I2C addr NACK");
+            System.Windows.Forms.ListViewItem listViewItem28 = new System.Windows.Forms.ListViewItem("I2C data NACK");
+            System.Windows.Forms.ListViewItem listViewItem29 = new System.Windows.Forms.ListViewItem("I2C unknown IRQ");
+            System.Windows.Forms.ListViewItem listViewItem30 = new System.Windows.Forms.ListViewItem("I2C stuck SDA cycles");
+            System.Windows.Forms.ListViewItem listViewItem31 = new System.Windows.Forms.ListViewItem("I2C stuck SCL cycles");
+            System.Windows.Forms.ListViewItem listViewItem32 = new System.Windows.Forms.ListViewItem("Main loop cycles");
+            System.Windows.Forms.ListViewItem listViewItem33 = new System.Windows.Forms.ListViewItem("Systick");
+            System.Windows.Forms.ListViewItem listViewItem34 = new System.Windows.Forms.ListViewItem("COMP_MCU_TEMP");
+            System.Windows.Forms.ListViewItem listViewItem35 = new System.Windows.Forms.ListViewItem("COMP_V_SUPPLY");
+            System.Windows.Forms.ListViewItem listViewItem36 = new System.Windows.Forms.ListViewItem("COMP_VDD");
+            System.Windows.Forms.ListViewItem listViewItem37 = new System.Windows.Forms.ListViewItem("COMP_I_SENSE");
+            System.Windows.Forms.ListViewItem listViewItem38 = new System.Windows.Forms.ListViewItem("COMP_CONT_MON");
+            System.Windows.Forms.ListViewItem listViewItem39 = new System.Windows.Forms.ListViewItem("COMP_I_REF");
+            System.Windows.Forms.ListViewItem listViewItem40 = new System.Windows.Forms.ListViewItem("COMP_I_DIAG");
+            System.Windows.Forms.ListViewItem listViewItem41 = new System.Windows.Forms.ListViewItem("COMP_ESTOP_MON");
+            System.Windows.Forms.ListViewItem listViewItem42 = new System.Windows.Forms.ListViewItem("COMP_IN1_V");
+            System.Windows.Forms.ListViewItem listViewItem43 = new System.Windows.Forms.ListViewItem("COMP_IN2_V");
+            System.Windows.Forms.ListViewItem listViewItem44 = new System.Windows.Forms.ListViewItem("COMP_IN3_V");
+            System.Windows.Forms.ListViewItem listViewItem45 = new System.Windows.Forms.ListViewItem("COMP_IN4_V");
+            System.Windows.Forms.ListViewItem listViewItem46 = new System.Windows.Forms.ListViewItem("COMP_IN5_V");
+            System.Windows.Forms.ListViewItem listViewItem47 = new System.Windows.Forms.ListViewItem("COMP_IN6_V");
+            System.Windows.Forms.ListViewItem listViewItem48 = new System.Windows.Forms.ListViewItem("COMP_IN7_V");
+            System.Windows.Forms.ListViewItem listViewItem49 = new System.Windows.Forms.ListViewItem("COMP_IN8_V");
+            System.Windows.Forms.ListViewItem listViewItem50 = new System.Windows.Forms.ListViewItem("COMP_OUT");
+            System.Windows.Forms.ListViewItem listViewItem51 = new System.Windows.Forms.ListViewItem("COMP_CONT_STATE");
+            System.Windows.Forms.ListViewItem listViewItem52 = new System.Windows.Forms.ListViewItem("CONT_LOCKOUT");
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle15 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
@@ -78,6 +112,12 @@ namespace tincanbms_cfg
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.lvLockoutFlags = new System.Windows.Forms.ListView();
+            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.dbgData2 = new System.Windows.Forms.ListView();
+            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.dbgData = new System.Windows.Forms.ListView();
             this.itm = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.val = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -537,6 +577,8 @@ namespace tincanbms_cfg
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.lvLockoutFlags);
+            this.tabPage1.Controls.Add(this.dbgData2);
             this.tabPage1.Controls.Add(this.dbgData);
             this.tabPage1.Controls.Add(this.dataGridView1);
             this.tabPage1.Location = new System.Drawing.Point(4, 22);
@@ -547,18 +589,17 @@ namespace tincanbms_cfg
             this.tabPage1.Text = "Live data";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
-            // dbgData
+            // lvLockoutFlags
             // 
-            this.dbgData.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.dbgData.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.itm,
-            this.val,
-            this.columnHeader1});
-            this.dbgData.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.dbgData.FullRowSelect = true;
-            this.dbgData.GridLines = true;
-            this.dbgData.HideSelection = false;
-            this.dbgData.Items.AddRange(new System.Windows.Forms.ListViewItem[] {
+            this.lvLockoutFlags.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lvLockoutFlags.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader4,
+            this.columnHeader5});
+            this.lvLockoutFlags.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lvLockoutFlags.FullRowSelect = true;
+            this.lvLockoutFlags.GridLines = true;
+            this.lvLockoutFlags.HideSelection = false;
+            this.lvLockoutFlags.Items.AddRange(new System.Windows.Forms.ListViewItem[] {
             listViewItem1,
             listViewItem2,
             listViewItem3,
@@ -574,13 +615,103 @@ namespace tincanbms_cfg
             listViewItem13,
             listViewItem14,
             listViewItem15,
-            listViewItem16,
+            listViewItem16});
+            this.lvLockoutFlags.Location = new System.Drawing.Point(319, 280);
+            this.lvLockoutFlags.Name = "lvLockoutFlags";
+            this.lvLockoutFlags.Size = new System.Drawing.Size(170, 363);
+            this.lvLockoutFlags.TabIndex = 1;
+            this.lvLockoutFlags.UseCompatibleStateImageBehavior = false;
+            this.lvLockoutFlags.View = System.Windows.Forms.View.Details;
+            // 
+            // columnHeader4
+            // 
+            this.columnHeader4.Text = "Lockout flag";
+            this.columnHeader4.Width = 98;
+            // 
+            // columnHeader5
+            // 
+            this.columnHeader5.Text = "Active";
+            this.columnHeader5.Width = 55;
+            // 
+            // dbgData2
+            // 
+            this.dbgData2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.dbgData2.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader2,
+            this.columnHeader3});
+            this.dbgData2.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.dbgData2.FullRowSelect = true;
+            this.dbgData2.GridLines = true;
+            this.dbgData2.HideSelection = false;
+            this.dbgData2.Items.AddRange(new System.Windows.Forms.ListViewItem[] {
             listViewItem17,
             listViewItem18,
-            listViewItem19});
+            listViewItem19,
+            listViewItem20,
+            listViewItem21,
+            listViewItem22,
+            listViewItem23,
+            listViewItem24,
+            listViewItem25,
+            listViewItem26,
+            listViewItem27,
+            listViewItem28,
+            listViewItem29,
+            listViewItem30,
+            listViewItem31,
+            listViewItem32,
+            listViewItem33});
+            this.dbgData2.Location = new System.Drawing.Point(495, 280);
+            this.dbgData2.Name = "dbgData2";
+            this.dbgData2.Size = new System.Drawing.Size(291, 363);
+            this.dbgData2.TabIndex = 1;
+            this.dbgData2.UseCompatibleStateImageBehavior = false;
+            this.dbgData2.View = System.Windows.Forms.View.Details;
+            // 
+            // columnHeader2
+            // 
+            this.columnHeader2.Text = "Item";
+            this.columnHeader2.Width = 172;
+            // 
+            // columnHeader3
+            // 
+            this.columnHeader3.Text = "Count";
+            this.columnHeader3.Width = 101;
+            // 
+            // dbgData
+            // 
+            this.dbgData.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.dbgData.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.itm,
+            this.val,
+            this.columnHeader1});
+            this.dbgData.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.dbgData.FullRowSelect = true;
+            this.dbgData.GridLines = true;
+            this.dbgData.HideSelection = false;
+            this.dbgData.Items.AddRange(new System.Windows.Forms.ListViewItem[] {
+            listViewItem34,
+            listViewItem35,
+            listViewItem36,
+            listViewItem37,
+            listViewItem38,
+            listViewItem39,
+            listViewItem40,
+            listViewItem41,
+            listViewItem42,
+            listViewItem43,
+            listViewItem44,
+            listViewItem45,
+            listViewItem46,
+            listViewItem47,
+            listViewItem48,
+            listViewItem49,
+            listViewItem50,
+            listViewItem51,
+            listViewItem52});
             this.dbgData.Location = new System.Drawing.Point(3, 280);
             this.dbgData.Name = "dbgData";
-            this.dbgData.Size = new System.Drawing.Size(357, 363);
+            this.dbgData.Size = new System.Drawing.Size(310, 363);
             this.dbgData.TabIndex = 1;
             this.dbgData.UseCompatibleStateImageBehavior = false;
             this.dbgData.View = System.Windows.Forms.View.Details;
@@ -588,17 +719,17 @@ namespace tincanbms_cfg
             // itm
             // 
             this.itm.Text = "Item";
-            this.itm.Width = 160;
+            this.itm.Width = 113;
             // 
             // val
             // 
             this.val.Text = "Value (HEX)";
-            this.val.Width = 84;
+            this.val.Width = 89;
             // 
             // columnHeader1
             // 
             this.columnHeader1.Text = "Value (DEC)";
-            this.columnHeader1.Width = 81;
+            this.columnHeader1.Width = 87;
             // 
             // dataGridView1
             // 
@@ -662,7 +793,7 @@ namespace tincanbms_cfg
             // moduleVolt
             // 
             this.moduleVolt.DataPropertyName = "modVolt";
-            dataGridViewCellStyle2.Format = "N2";
+            dataGridViewCellStyle2.Format = "N3";
             this.moduleVolt.DefaultCellStyle = dataGridViewCellStyle2;
             this.moduleVolt.HeaderText = "Umod";
             this.moduleVolt.Name = "moduleVolt";
@@ -671,7 +802,7 @@ namespace tincanbms_cfg
             // cell1
             // 
             this.cell1.DataPropertyName = "cell1Volt";
-            dataGridViewCellStyle3.Format = "N2";
+            dataGridViewCellStyle3.Format = "N3";
             this.cell1.DefaultCellStyle = dataGridViewCellStyle3;
             this.cell1.HeaderText = "U1";
             this.cell1.Name = "cell1";
@@ -680,7 +811,7 @@ namespace tincanbms_cfg
             // cell2
             // 
             this.cell2.DataPropertyName = "cell2Volt";
-            dataGridViewCellStyle4.Format = "N2";
+            dataGridViewCellStyle4.Format = "N3";
             this.cell2.DefaultCellStyle = dataGridViewCellStyle4;
             this.cell2.HeaderText = "U2";
             this.cell2.Name = "cell2";
@@ -689,7 +820,7 @@ namespace tincanbms_cfg
             // cell3
             // 
             this.cell3.DataPropertyName = "cell3Volt";
-            dataGridViewCellStyle5.Format = "N2";
+            dataGridViewCellStyle5.Format = "N3";
             this.cell3.DefaultCellStyle = dataGridViewCellStyle5;
             this.cell3.HeaderText = "U3";
             this.cell3.Name = "cell3";
@@ -698,7 +829,7 @@ namespace tincanbms_cfg
             // cell4
             // 
             this.cell4.DataPropertyName = "cell4Volt";
-            dataGridViewCellStyle6.Format = "N2";
+            dataGridViewCellStyle6.Format = "N3";
             this.cell4.DefaultCellStyle = dataGridViewCellStyle6;
             this.cell4.HeaderText = "U4";
             this.cell4.Name = "cell4";
@@ -707,7 +838,7 @@ namespace tincanbms_cfg
             // cell5
             // 
             this.cell5.DataPropertyName = "cell5Volt";
-            dataGridViewCellStyle7.Format = "N2";
+            dataGridViewCellStyle7.Format = "N3";
             this.cell5.DefaultCellStyle = dataGridViewCellStyle7;
             this.cell5.HeaderText = "U5";
             this.cell5.Name = "cell5";
@@ -716,7 +847,7 @@ namespace tincanbms_cfg
             // cell6
             // 
             this.cell6.DataPropertyName = "cell6Volt";
-            dataGridViewCellStyle8.Format = "N2";
+            dataGridViewCellStyle8.Format = "N3";
             this.cell6.DefaultCellStyle = dataGridViewCellStyle8;
             this.cell6.HeaderText = "U6";
             this.cell6.Name = "cell6";
@@ -3138,7 +3269,7 @@ namespace tincanbms_cfg
             this.tabPage3.Location = new System.Drawing.Point(4, 22);
             this.tabPage3.Name = "tabPage3";
             this.tabPage3.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage3.Size = new System.Drawing.Size(754, 759);
+            this.tabPage3.Size = new System.Drawing.Size(789, 649);
             this.tabPage3.TabIndex = 2;
             this.tabPage3.Text = "Firmware update";
             this.tabPage3.UseVisualStyleBackColor = true;
@@ -3148,7 +3279,7 @@ namespace tincanbms_cfg
             this.tabPage4.Location = new System.Drawing.Point(4, 22);
             this.tabPage4.Name = "tabPage4";
             this.tabPage4.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage4.Size = new System.Drawing.Size(754, 759);
+            this.tabPage4.Size = new System.Drawing.Size(789, 649);
             this.tabPage4.TabIndex = 3;
             this.tabPage4.Text = "Alarms";
             this.tabPage4.UseVisualStyleBackColor = true;
@@ -4201,6 +4332,12 @@ namespace tincanbms_cfg
         private System.Windows.Forms.DataGridViewTextBoxColumn modAlerts;
         private System.Windows.Forms.DataGridViewTextBoxColumn modFaults;
         private System.Windows.Forms.DataGridViewTextBoxColumn modBalState;
+        private System.Windows.Forms.ListView dbgData2;
+        private System.Windows.Forms.ColumnHeader columnHeader2;
+        private System.Windows.Forms.ColumnHeader columnHeader3;
+        private System.Windows.Forms.ListView lvLockoutFlags;
+        private System.Windows.Forms.ColumnHeader columnHeader4;
+        private System.Windows.Forms.ColumnHeader columnHeader5;
     }
 }
 

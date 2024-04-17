@@ -18,6 +18,7 @@
 #include <util/atomic.h>
 #include <util/crc16.h>
 #include "bmsmodule.h"
+#include "globals.h"
 
 
 #define GUARD_MSEC		10000
@@ -63,10 +64,6 @@ volatile uint8_t txBuf[TXBUF_SIZE];
 volatile uint8_t txBuf_cnt = 0;	// number of bytes sent
 volatile uint8_t txBuf_len = 0;	// number of bytes to send
 volatile uint8_t txStatus = COMM_STATUS_IDLE;
-
-volatile uint32_t uart_ferr_cnt = 0;
-volatile uint32_t uart_ovf_cnt = 0;
-volatile uint32_t uart_timeout_cnt = 0;
 
 volatile uint8_t batt_state = BATT_STATE_IDLE;
 
@@ -147,7 +144,7 @@ ISR(TCB1_INT_vect) {
 			//USART1.CTRLA &= ~USART_TXCIE_bm;	// disable Transmit Complete interrupt
 
 			rxStatus = RX_STATUS_TIMEOUT;
-			uart_timeout_cnt++;	
+			batt_comm_stats.uart_timeout_cnt++;	
 			
 			if (retries)
 			{
@@ -232,7 +229,7 @@ ISR(USART1_RXC_vect) {
 		// framing error
 		rxStatus = RX_STATUS_FERR;
 		
-		uart_ferr_cnt++;
+		batt_comm_stats.uart_ferr_cnt++;
 		
 		// Notify on RX complete
 		notifyDone = true;
@@ -242,7 +239,7 @@ ISR(USART1_RXC_vect) {
 		// buffer overflow
 		rxStatus = RX_STATUS_OVF;
 		
-		uart_ovf_cnt++;
+		batt_comm_stats.uart_ovf_cnt++;
 		
 		// Notify on RX complete
 		notifyDone = true;
@@ -274,6 +271,8 @@ ISR(USART1_RXC_vect) {
 			{
 				// mismatch
 				rxStatus = RX_STATUS_CRC_ERR;
+				
+				batt_comm_stats.uart_dataerr_cnt++;
 			
 				// Notify on RX complete
 				notifyDone = true;
@@ -293,15 +292,21 @@ ISR(USART1_RXC_vect) {
 						if (txBuf[3] != rxData)	// check last byte
 						{
 							rxStatus = RX_STATUS_CRC_ERR;
+							
+							batt_comm_stats.uart_dataerr_cnt++;
 						}
 						else if ((txBuf[0] == 1) && (!rxBlockBit)) // if packet was sent to address 0, check if blocking bit is set
 						{
 							// yes, but blocking bit not set
 							rxStatus = RX_STATUS_NOREPLY;
+							
+							batt_comm_stats.uart_noreply_cnt++;
 						}
 						else
 						{
 							rxStatus = RX_STATUS_OK;
+							
+							batt_comm_stats.uart_ok_cnt++;
 						}
 					
 						// Notify on RX complete
@@ -316,6 +321,8 @@ ISR(USART1_RXC_vect) {
 					{
 						// if packet was sent to address 0, check if blocking bit is set, if not only 3 bytes are expected (no answer)
 						rxStatus = RX_STATUS_NOREPLY;
+						
+						batt_comm_stats.uart_noreply_cnt++;
 											
 						// Notify on RX complete
 						notifyDone = true;
@@ -329,10 +336,13 @@ ISR(USART1_RXC_vect) {
 						{
 							// CRC error
 							rxStatus = RX_STATUS_CRC_ERR;
+							batt_comm_stats.uart_crcerr_cnt++;
 						}
 						else
 						{
 							rxStatus = RX_STATUS_OK;
+							
+							batt_comm_stats.uart_ok_cnt++;
 						}
 					
 						// Notify on RX complete
@@ -349,6 +359,8 @@ ISR(USART1_RXC_vect) {
 		{
 			// buffer overflow
 			rxStatus = RX_STATUS_OVF;
+			
+			batt_comm_stats.uart_buf_ovf_cnt++;
 			
 			// Notify on RX complete
 			notifyDone = true;
@@ -635,6 +647,16 @@ uint8_t batt_get_module_cnt()
 	return numFoundModules;
 }
 
+
+void set_comm_flt_all()
+{
+	// set COMM fault for all modules
+	for (uint8_t mod = 0; mod < numFoundModules; mod++)
+	{
+		modules[mod].faults |= BATT_FAULT_NOCOMM;		// set comm fault flag
+	}
+}
+
 void bms_state_machine()
 {
 	static uint8_t curr_module;
@@ -712,6 +734,10 @@ void bms_state_machine()
 				{
 					// failed
 					// TODO: notify
+					
+					// set COMM fault for all modules
+					set_comm_flt_all();
+					
 					batt_state = BATT_STATE_IDLE;
 				}
 				
@@ -729,6 +755,10 @@ void bms_state_machine()
 				{
 					// failed
 					// TODO: notify
+					
+					// set COMM fault for all modules
+					set_comm_flt_all();
+					
 					batt_state = BATT_STATE_IDLE;
 				}
 				
@@ -747,6 +777,10 @@ void bms_state_machine()
 				{
 					// failed
 					// TODO: notify
+					
+					// set COMM fault for all modules
+					set_comm_flt_all();
+					
 					batt_state = BATT_STATE_IDLE;
 				}
 				
@@ -764,6 +798,10 @@ void bms_state_machine()
 				{
 					// failed
 					// TODO: notify
+					
+					// set COMM fault for all modules
+					set_comm_flt_all();
+					
 					batt_state = BATT_STATE_IDLE;
 				}
 				

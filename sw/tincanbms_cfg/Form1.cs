@@ -546,8 +546,32 @@ namespace tincanbms_cfg
             }
         }
 
+
+        public static void SetDoubleBuffered(System.Windows.Forms.Control c)
+        {
+            //Taxes: Remote Desktop Connection and painting
+            //http://blogs.msdn.com/oldnewthing/archive/2006/01/03/508694.aspx
+            if (System.Windows.Forms.SystemInformation.TerminalServerSession)
+                return;
+
+            System.Reflection.PropertyInfo aProp =
+                  typeof(System.Windows.Forms.Control).GetProperty(
+                        "DoubleBuffered",
+                        System.Reflection.BindingFlags.NonPublic |
+                        System.Reflection.BindingFlags.Instance);
+
+            aProp.SetValue(c, true, null);
+        }
+
+
         private void Form1_Load(object sender, EventArgs e)
         {
+
+            SetDoubleBuffered(dbgData);
+            SetDoubleBuffered(dbgData2);
+            SetDoubleBuffered(lvLockoutFlags);
+            SetDoubleBuffered(dataGridView1);
+
             dataGridView1.AutoGenerateColumns = false;
             dataGridView1.DataSource = lBattData;
 
@@ -583,7 +607,17 @@ namespace tincanbms_cfg
                 itm.SubItems.Add("N/A");
                 itm.SubItems.Add("N/A");
             }
-            
+
+            foreach (ListViewItem itm in dbgData2.Items)
+            {
+                itm.SubItems.Add("N/A");
+            }
+
+            foreach (ListViewItem itm in lvLockoutFlags.Items)
+            {
+                itm.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+                itm.SubItems.Add("N/A");
+            }
 
 
 
@@ -1143,7 +1177,7 @@ namespace tincanbms_cfg
                                 bw.Write((UInt16)(((UInt16)cellBalTimeout.Value) | 0x80));
                                 bw.Write((UInt16)cellBalIdleTime.Value);
 
-                                bw.Write((UInt16)0x1830); //alertFaultMask
+                                bw.Write((UInt16)0xff3b); //alertFaultMask
 
 
                                 bw.Write((UInt16)inpIgnInNum.Value);
@@ -1590,6 +1624,8 @@ namespace tincanbms_cfg
                                 br.ReadByte();  // Function code
                                 br.ReadByte();  // Byte count
 
+                                dbgData.BeginUpdate();
+                                lvLockoutFlags.BeginUpdate();
 
                                 foreach (ListViewItem itm in dbgData.Items)
                                 {
@@ -1653,15 +1689,89 @@ namespace tincanbms_cfg
                                             itm.SubItems[2].Text = newText;
                                     }
 
+                                    if (itm.Index == 18)
+                                    {
+
+                                        foreach (ListViewItem lockoutFlag in lvLockoutFlags.Items)
+                                        {
+                                            if ((val >> lockoutFlag.Index & 0x01) == 0x01)
+                                            {
+                                                // Flag active
+                                                if (lockoutFlag.SubItems[1].Text != "Yes")
+                                                {
+                                                    lockoutFlag.SubItems[1].Text = "Yes";
+                                                    lockoutFlag.ForeColor = Color.Red;
+                                                }
+                                                
+                                            }
+                                            else
+                                            {
+                                                // Flag inactive
+                                                if (lockoutFlag.SubItems[1].Text != "No")
+                                                {
+                                                    lockoutFlag.SubItems[1].Text = "No";
+                                                    lockoutFlag.ForeColor = Color.Green;
+                                                }
+                                            }
+                                        }
+
+                                    }
+
                                 }
 
+                                dbgData.EndUpdate();
+                                lvLockoutFlags.EndUpdate();
 
                                 br.Close();
                                 stream.Close();
 
                             });
 
-                        }
+
+
+                        modb = modbusASCII_readReg(0, 11000, 34);
+
+                        this.Invoke((MethodInvoker)delegate
+                        {
+
+                            // Reverse bytes (BE -> LE)
+                            if (BitConverter.IsLittleEndian)
+                            {
+                                for (int i = 0; i < 17; i++)
+                                {
+                                    Array.Reverse(modb, 3 + (i * 4), 4);
+                                }
+
+
+                            }
+                            MemoryStream stream = new MemoryStream(modb);
+                            BinaryReader br = new BinaryReader(stream);
+
+                            br.ReadByte();  // Slave address
+                            br.ReadByte();  // Function code
+                            br.ReadByte();  // Byte count
+
+                            dbgData2.BeginUpdate();
+
+                            foreach (ListViewItem itm in dbgData2.Items)
+                            {
+                                UInt32 val = br.ReadUInt32();
+                                string newText = val.ToString();
+
+                                if (newText != itm.SubItems[1].Text)
+                                    itm.SubItems[1].Text = newText;
+
+                            }
+
+                            dbgData2.EndUpdate();
+
+
+                            br.Close();
+                            stream.Close();
+
+                        });
+
+                    }
 
 
 
@@ -1700,7 +1810,7 @@ namespace tincanbms_cfg
 
 
 
-                Thread.Sleep(100);
+                Thread.Sleep(10);
 
             }
         }

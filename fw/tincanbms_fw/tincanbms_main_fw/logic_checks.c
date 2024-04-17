@@ -312,26 +312,38 @@ bool check_regen_lockout()
 	
 }
 
-uint8_t check_heater_enable(bool chargerEn, bool ignOn)
+uint8_t check_heater_enable(bool contLockout, bool chargerEn, bool ignOn)
 {
 	static uint32_t pump_lastRun = 0;
 	static uint8_t heater_state = HEATER_ENABLE_OFF;
 	
-	if ((heater_state != HEATER_ENABLE_PUMP_HEAT) && (batt_stats.temp_min <= bms_limits.heaterOnTemp))
+	if (contLockout)
 	{
-		// switch heater and pump on
-		heater_state = HEATER_ENABLE_PUMP_HEAT;
+		if (heater_state == HEATER_ENABLE_PUMP_HEAT)
+		{
+			heater_state = HEATER_ENABLE_PUMP;
+		}
 	}
-	else if ((heater_state == HEATER_ENABLE_PUMP_HEAT) && (batt_stats.temp_min >= bms_limits.heaterOffTemp))
+	else
 	{
-		// all cells heated up, switch off heater
-		heater_state = HEATER_ENABLE_PUMP;
-		pump_lastRun = SysTick_GetTicks();	// let pump run for some time to allow for cool-down
+		if ((heater_state != HEATER_ENABLE_PUMP_HEAT) && (batt_stats.temp_min <= bms_limits.heaterOnTemp))
+		{
+			// switch heater and pump on
+			heater_state = HEATER_ENABLE_PUMP_HEAT;
+		}
+		else if ((heater_state == HEATER_ENABLE_PUMP_HEAT) && (batt_stats.temp_min >= bms_limits.heaterOffTemp))
+		{
+			// all cells heated up, switch off heater
+			heater_state = HEATER_ENABLE_PUMP;
+			pump_lastRun = SysTick_GetTicks();	// let pump run for some time to allow for cool-down
+		}		
 	}
 	
-	if (chargerEn || ignOn)
+	if ((chargerEn && (!contLockout)) || ignOn)
 	{
-		heater_state = HEATER_ENABLE_PUMP;
+		if (heater_state == HEATER_ENABLE_OFF)
+			heater_state = HEATER_ENABLE_PUMP;
+		pump_lastRun = SysTick_GetTicks();
 		//pump_lastRun = SysTick_GetTicks() - ((uint32_t)bms_limits.pumpOnSeconds * 1000);
 	}
 	else if (heater_state == HEATER_ENABLE_PUMP)

@@ -35,3 +35,7 @@ uint32_t sim_data_readouts_done = 0;
 uint16_t simKey = 0;
 bool sim_status_wr_en = false;
 
+volatile batt_comm_stats_t batt_comm_stats = {0};
+volatile i2c_comm_stats_t i2c_comm_stats = {0};
+
+volatile uint32_t mainloop_cycles = 0;
