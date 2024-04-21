@@ -28,7 +28,7 @@ FUSES = {
 	.WDTCFG = PERIOD_OFF_gc | WINDOW_OFF_gc,
 	.BODCFG = LVL_BODLEVEL3_gc | BOD_SLEEP_SAMPLED_gc | BOD_SAMPFREQ_128HZ_gc | BOD_ACTIVE_ENWAKE_gc,
 	.OSCCFG = CLKSEL_OSCHF_gc,
-	.SYSCFG0 = RSTPINCFG_RST_gc | UPDIPINCFG_UPDI_gc | CRCSEL_CRC16_gc | CRCSRC_NOCRC_gc,
+	.SYSCFG0 = RSTPINCFG_RST_gc | UPDIPINCFG_UPDI_gc | CRCSEL_CRC16_gc | CRCSRC_NOCRC_gc | FUSE_EESAVE_bm,
 	.SYSCFG1 = SUT_0MS_gc | MVSYSCFG_SINGLE_gc,
 	.CODESIZE = 0x00,
 	.BOOTSIZE = 0x00
@@ -381,6 +381,9 @@ uint8_t mainLogic_idle()
 	
 	static uint8_t cont_step = 0;
 	
+	static uint8_t balCheckCurrModule = 0;
+	static bool balCheckInProgress = false;	
+	
 	static bool init = false;	// flag to signal startup done
 	
 	uint8_t newOutputState = 0;
@@ -675,7 +678,7 @@ uint8_t mainLogic_idle()
 	
 	
 	// Cell balancing
-	if ((!contactorEnabled) && (acPresActive) && (cont_step == 0) && (init == true))
+	if ((acPresActive) && (cont_step == 0) && (init == true))
 	{
 		bool balActive = false;
 		
@@ -700,15 +703,26 @@ uint8_t mainLogic_idle()
 
 		}
 		
-		if (!balActive)
+		if ((!balActive) || balCheckInProgress)
 		{
-			// no balancing active in any module
+			// no balancing active in any module, or check already in progress
 			
 			if (SysTick_CheckElapsed(balance_idle_timer, (uint32_t)bms_limits.balIdleTime * 1000))
 			{
 				// Timer expired
-				for (uint8_t mod = 0; mod < batt_stats.numModulesPresent; mod++)
+				
+				if (!balCheckInProgress)
 				{
+					balCheckInProgress = true;
+					balCheckCurrModule = 0;
+				}
+				
+				if (balCheckCurrModule < batt_stats.numModulesPresent)
+				{
+					
+				
+				//for (uint8_t mod = 0; mod < batt_stats.numModulesPresent; mod++)
+				//{
 					uint8_t cellsToBalance = 0;
 			
 					// balancing not active
@@ -717,10 +731,10 @@ uint8_t mainLogic_idle()
 						if (simKey == SIM_MODE_KEY)
 						{
 							// sim mode
-							if (sim_modules[mod].balState & (1 << cell))
+							if (sim_modules[balCheckCurrModule].balState & (1 << cell))
 							{
 								// balancing already active
-								if (sim_modules[mod].cellVolt[cell] > (batt_stats.cellVolt_min + bms_limits.balFinishDelta))
+								if (sim_modules[balCheckCurrModule].cellVolt[cell] > (batt_stats.cellVolt_min + bms_limits.balFinishDelta))
 								{
 									// continue balancing
 									cellsToBalance |= 1 << cell;
@@ -729,7 +743,7 @@ uint8_t mainLogic_idle()
 							else
 							{
 								// balancing not active
-								if (sim_modules[mod].cellVolt[cell] >= (batt_stats.cellVolt_min + bms_limits.balMaxDelta))
+								if (sim_modules[balCheckCurrModule].cellVolt[cell] >= (batt_stats.cellVolt_min + bms_limits.balMaxDelta))
 								{
 									// Balancing this cell is needed
 									cellsToBalance |= 1 << cell;
@@ -738,10 +752,10 @@ uint8_t mainLogic_idle()
 						}
 						else
 						{
-							if (modules[mod].balState & (1 << cell))
+							if (modules[balCheckCurrModule].balState & (1 << cell))
 							{
 								// balancing already active
-								if (modules[mod].cellVolt[cell] > (batt_stats.cellVolt_min + bms_limits.balFinishDelta))
+								if (modules[balCheckCurrModule].cellVolt[cell] > (batt_stats.cellVolt_min + bms_limits.balFinishDelta))
 								{
 									// continue balancing
 									cellsToBalance |= 1 << cell;
@@ -750,7 +764,7 @@ uint8_t mainLogic_idle()
 							else
 							{
 								// balancing not active
-								if (modules[mod].cellVolt[cell] >= (batt_stats.cellVolt_min + bms_limits.balMaxDelta))
+								if (modules[balCheckCurrModule].cellVolt[cell] >= (batt_stats.cellVolt_min + bms_limits.balMaxDelta))
 								{
 									// Balancing this cell is needed
 									cellsToBalance |= 1 << cell;
@@ -762,12 +776,27 @@ uint8_t mainLogic_idle()
 					
 					// Send balance cmd
 					if (simKey != SIM_MODE_KEY)
-						batt_req_setbal(mod+1, cellsToBalance, bms_limits.balInterval);
+					{
+						if (!batt_bal_pend())
+						{
+							batt_req_setbal(balCheckCurrModule+1, cellsToBalance, bms_limits.balInterval);
+							balCheckCurrModule++;
+						}
+						
+					}
 					else
-						sim_modules[mod].balState = cellsToBalance;
+						sim_modules[balCheckCurrModule].balState = cellsToBalance;
 					
 					
 				}
+				else
+				{
+					// done
+					balCheckInProgress = false;
+				}
+				
+				// reset timer to avoid infinite balance requests loop (balance status never gets updated due to continuous balance start requests)
+				balance_idle_timer = SysTick_GetTicks();
 			}
 		}
 		else

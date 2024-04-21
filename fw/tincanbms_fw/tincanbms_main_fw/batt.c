@@ -584,7 +584,7 @@ void batt_req_setbal(uint8_t pack, uint8_t cells, uint8_t timeout)
 	batt_balance_cells = cells;
 	batt_balance_timeout = timeout;
 	batt_balance_set_ok = false;
-	batt_balance_set_pend = true;	
+	batt_balance_set_pend = true;
 }
 
 bool batt_bal_pend()
