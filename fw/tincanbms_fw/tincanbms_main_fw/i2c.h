@@ -84,6 +84,8 @@ typedef enum
 
 
 
+extern COMP_MCU_state_t comp_mcu_state;
+
 void        I2C_Init(void);
 i2c_error_t I2C_Write(uint8_t address, uint8_t *pData, size_t dataLength);
 i2c_error_t I2C_Read(uint8_t address, uint8_t *pData, size_t dataLength);

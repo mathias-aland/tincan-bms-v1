@@ -18,10 +18,13 @@
 
 #include <stdbool.h>
 #include "i2c.h"
+#include "spi.h"
 #include "usart0.h"
 #include "bmsmodule.h"
 #include "systick.h"
 #include "logic_checks.h"
+#include "eeprom.h"
+#include "modbus.h"
 
 
 FUSES = {
@@ -41,8 +44,7 @@ LOCKBITS = LOCK_KEY_NOLOCK_gc;
 #define DUTY_CYCLE      750
 
 
-#define SPI_CLIENT_SELECT()    PORTA.OUTCLR = PIN7_bm  /* Set SS pin value to LOW */
-#define SPI_CLIENT_DESELECT()  PORTA.OUTSET = PIN7_bm  /* Set SS pin value to HIGH */
+
 
 
 #define ADC_SHIFT_DIV64    (6)
@@ -84,7 +86,7 @@ uint8_t outputState = 0;
 uint32_t pump_lastRun = 0;
 
 
-extern COMP_MCU_state_t comp_mcu_state;
+
 
 ISR(NMI_vect)
 {
@@ -128,13 +130,7 @@ ISR(NMI_vect)
 }
 
 
-uint8_t SPI0_exchangeData(uint8_t sent_data)
-{
-    SPI0.DATA = sent_data;
-    while (!(SPI0.INTFLAGS & SPI_IF_bm));  /* waits until data is exchanged */
 
-    return SPI0.DATA;
-}
 
 
 static uint16_t ADC0_read(void)
@@ -180,80 +176,7 @@ bool i2c_readval(uint8_t addr, uint8_t reg, uint8_t *buf, uint8_t len)
 
 
 
-void update_stats()
-{
-	
-	
-	if (numFoundModules == 0)
-	{
-		return;
-	}
-	
-	batt_stats_t batt_stats_tmp;
-	
-	batt_stats_tmp.temp_max = INT16_MIN;
-	batt_stats_tmp.temp_min = INT16_MAX;
-	batt_stats_tmp.cellVolt_max = 0;
-	batt_stats_tmp.cellVolt_min = UINT16_MAX;
-	batt_stats_tmp.moduleFaults = 0;
-	batt_stats_tmp.moduleAlerts = 0;
-	
 
-	for (uint8_t mod=0; mod < numFoundModules; mod++)
-	{
-		//uint8_t alerts, faults, cuv_flt, cov_flt;
-		
-		// check cell voltages
-		for (int cell=0; cell<6; cell++)
-		{
-			uint16_t cellV = modules[mod].cellVolt[cell];			
-			
-			// Update cell min/max voltages
-			if (cellV < batt_stats_tmp.cellVolt_min)
-			{
-				batt_stats_tmp.cellVolt_min = cellV;
-			}
-						
-			if (cellV > batt_stats_tmp.cellVolt_max)
-			{
-				batt_stats_tmp.cellVolt_max = cellV;
-			}
-		}
-		
-		// check temperatures
-		for (uint8_t sensor=0; sensor<2; sensor++)
-		{
-			int16_t tempVal = modules[mod].temperatures[sensor];
-			
-			if (tempVal < batt_stats_tmp.temp_min)
-			{
-				batt_stats_tmp.temp_min = tempVal;	// update min temp value
-			}
-			
-			if (tempVal > batt_stats_tmp.temp_max)
-			{
-				batt_stats_tmp.temp_max = tempVal;	// update max temp value
-			}
-		}
-		
-		/* Alerts */
-		batt_stats_tmp.moduleAlerts |= modules[mod].alerts;
-		
-		/* Faults */
-		batt_stats_tmp.moduleFaults |= modules[mod].faults;
-	}
-	
-	// Current
-	batt_stats_tmp.batt_current = comp_mcu_state.i_sense / 10;
-	
-	// Readouts
-	batt_stats_tmp.readOutsCnt = batt_get_total_readouts();
-	
-	// Number of modules
-	batt_stats_tmp.numModulesPresent = numFoundModules;
-	
-	batt_stats = batt_stats_tmp;	
-}
 
 void sim_update_stats()
 {
@@ -368,28 +291,18 @@ uint8_t mainLogic_idle()
 	static bool driveEnabled = false;
 	static bool chargerEnabled_last = false;
 	
-	
 	static bool startActive_last = false;
-	//static bool chargerEnabled_last = false;
 	
 	static uint32_t contactor_timer = 0;
 	static uint32_t contactor_lockout_timer = 0;
 	
-	static uint32_t contactor_idle_timer = 0;
-	
-	static uint32_t balance_idle_timer = 0;
+	static uint32_t contactor_idle_timer = 0;	
 	
 	static uint8_t cont_step = 0;
-	
-	static uint8_t balCheckCurrModule = 0;
-	static bool balCheckInProgress = false;	
 	
 	static bool init = false;	// flag to signal startup done
 	
 	uint8_t newOutputState = 0;
-	uint8_t pwmFreq = 0;
-	uint8_t pwmDuty1 = 0;
-	uint8_t pwmDuty2 = 0;
 	
 	uint16_t cont_lockout_new = 0;
 
@@ -463,12 +376,7 @@ uint8_t mainLogic_idle()
 		contactor_lockout_timer = SysTick_GetTicks();
 	}
 	
-
-	
-	
-	
 	//cont_lockout = 0;	// DEBUG
-	
 	
 	if ((batt_stats.numModulesPresent == 0) || (init == false))
 	{
@@ -680,132 +588,14 @@ uint8_t mainLogic_idle()
 	// Cell balancing
 	if ((acPresActive) && (cont_step == 0) && (init == true))
 	{
-		bool balActive = false;
-		
-		// Check if any balancing is already active
-		for (uint8_t mod = 0; mod < batt_stats.numModulesPresent; mod++)
-		{
-			if (simKey == SIM_MODE_KEY)
-			{
-				// sim mode
-				if (sim_modules[mod].status & BATT_STATUS_CBT)
-				{
-					balActive = true;
-				}
-			}
-			else
-			{
-				if (modules[mod].status & BATT_STATUS_CBT)
-				{
-					balActive = true;
-				}
-			}
-
-		}
-		
-		if ((!balActive) || balCheckInProgress)
-		{
-			// no balancing active in any module, or check already in progress
-			
-			if (SysTick_CheckElapsed(balance_idle_timer, (uint32_t)bms_limits.balIdleTime * 1000))
-			{
-				// Timer expired
-				
-				if (!balCheckInProgress)
-				{
-					balCheckInProgress = true;
-					balCheckCurrModule = 0;
-				}
-				
-				if (balCheckCurrModule < batt_stats.numModulesPresent)
-				{
-					
-				
-				//for (uint8_t mod = 0; mod < batt_stats.numModulesPresent; mod++)
-				//{
-					uint8_t cellsToBalance = 0;
-			
-					// balancing not active
-					for (uint8_t cell = 0; cell < 6; cell++)
-					{
-						if (simKey == SIM_MODE_KEY)
-						{
-							// sim mode
-							if (sim_modules[balCheckCurrModule].balState & (1 << cell))
-							{
-								// balancing already active
-								if (sim_modules[balCheckCurrModule].cellVolt[cell] > (batt_stats.cellVolt_min + bms_limits.balFinishDelta))
-								{
-									// continue balancing
-									cellsToBalance |= 1 << cell;
-								}
-							}
-							else
-							{
-								// balancing not active
-								if (sim_modules[balCheckCurrModule].cellVolt[cell] >= (batt_stats.cellVolt_min + bms_limits.balMaxDelta))
-								{
-									// Balancing this cell is needed
-									cellsToBalance |= 1 << cell;
-								}
-							}
-						}
-						else
-						{
-							if (modules[balCheckCurrModule].balState & (1 << cell))
-							{
-								// balancing already active
-								if (modules[balCheckCurrModule].cellVolt[cell] > (batt_stats.cellVolt_min + bms_limits.balFinishDelta))
-								{
-									// continue balancing
-									cellsToBalance |= 1 << cell;
-								}
-							}
-							else
-							{
-								// balancing not active
-								if (modules[balCheckCurrModule].cellVolt[cell] >= (batt_stats.cellVolt_min + bms_limits.balMaxDelta))
-								{
-									// Balancing this cell is needed
-									cellsToBalance |= 1 << cell;
-								}
-							}								
-						}
-					}
-					
-					
-					// Send balance cmd
-					if (simKey != SIM_MODE_KEY)
-					{
-						if (!batt_bal_pend())
-						{
-							batt_req_setbal(balCheckCurrModule+1, cellsToBalance, bms_limits.balInterval);
-							balCheckCurrModule++;
-						}
-						
-					}
-					else
-						sim_modules[balCheckCurrModule].balState = cellsToBalance;
-					
-					
-				}
-				else
-				{
-					// done
-					balCheckInProgress = false;
-				}
-				
-				// reset timer to avoid infinite balance requests loop (balance status never gets updated due to continuous balance start requests)
-				balance_idle_timer = SysTick_GetTicks();
-			}
-		}
-		else
-		{
-			// Balancing active
-			balance_idle_timer = SysTick_GetTicks();
-		}
+		// balancing allowed
+		batt_set_balAllowed(true);
 	}
-	
+	else
+	{
+		// balancing forbidden
+		batt_set_balAllowed(false);
+	}
 	
 	// Pump control output
 	if (heaterState != HEATER_ENABLE_OFF)
@@ -1081,46 +871,17 @@ int main(void) {
 
     }
     
-    
-    SPI_CLIENT_SELECT();
-
-
-    SPI0_exchangeData(0x03);    // READ
-    SPI0_exchangeData(0x0E);    // CANSTAT
-
-    uint8_t reg = SPI0_exchangeData(0x00);    // read register
-
-    SPI_CLIENT_DESELECT();
-
-    //printf("CANSTAT = 0x%02x\n\r", reg);
-    
-    SPI_CLIENT_SELECT();
-
-
-    SPI0_exchangeData(0x03);    // READ
-    SPI0_exchangeData(0x0F);    // CANCTRL
-
-    reg = SPI0_exchangeData(0x00);    // read register
-
-    SPI_CLIENT_DESELECT();
-
-   // printf("CANCTRL = 0x%02x\n\r", reg);
-
+	
+	// Reset CAN controller
+    mcp2515_reset();
+	_delay_ms(1);	// wait for reset
+	
+    //printf("CANSTAT = 0x%02x\n\r", mcp2515_readbyte(0x0E));	// CANSTAT
+   // printf("CANCTRL = 0x%02x\n\r", mcp2515_readbyte(0x0F));	// CANCTRL
 
 	// CAN controller sleep
-	SPI_CLIENT_SELECT();
+	mcp2515_writebyte(0x0F, 0x23);	// CANCTRL = 0x23 (set sleep mode, disable CLKOUT)
 
-
-	SPI0_exchangeData(0x02);    // WRITE
-	SPI0_exchangeData(0x0F);    // CANCTRL
-	SPI0_exchangeData(0x23);    // write register (set sleep mode, disable CLKOUT)
-
-	SPI_CLIENT_DESELECT();
-    
-	
-	
-	
-	
 	
 	/* --- USART1 INIT (BATT COMM) --- */
 	
@@ -1141,9 +902,9 @@ int main(void) {
 	sei();	// global interrupt enable
 
 		
-		reg = TCB0.CTRLA;
+		//reg = TCB0.CTRLA;
 		//printf("TCB0.CTRLA = 0x%02x\n\r", reg);
-		reg = TCB0.INTCTRL;
+		//reg = TCB0.INTCTRL;
 		//printf("TCB0.INTCTRL = 0x%02x\n\r", reg);
 		
 	
@@ -1184,9 +945,7 @@ int main(void) {
 		else
 		{
 			simKey = 0;
-			update_stats();	// update battery stats (min/max temp, faults etc)
 		}
-		
 		
 		
 		// control logic

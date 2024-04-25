@@ -379,6 +379,8 @@ namespace tincanbms_cfg
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
+            this.btnEnBoot = new System.Windows.Forms.Button();
+            this.btnExitBoot = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -451,6 +453,7 @@ namespace tincanbms_cfg
             ((System.ComponentModel.ISupportInitialize)(this.conLockoutMinCurr)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.conLockoutUVP)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.modCnt)).BeginInit();
+            this.tabPage3.SuspendLayout();
             this.tabPage5.SuspendLayout();
             this.groupBox11.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.simTemp2)).BeginInit();
@@ -1018,6 +1021,11 @@ namespace tincanbms_cfg
             // heaterPumpDuty
             // 
             this.heaterPumpDuty.Location = new System.Drawing.Point(134, 175);
+            this.heaterPumpDuty.Maximum = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
             this.heaterPumpDuty.Name = "heaterPumpDuty";
             this.heaterPumpDuty.Size = new System.Drawing.Size(70, 20);
             this.heaterPumpDuty.TabIndex = 3;
@@ -3266,6 +3274,8 @@ namespace tincanbms_cfg
             // 
             // tabPage3
             // 
+            this.tabPage3.Controls.Add(this.btnExitBoot);
+            this.tabPage3.Controls.Add(this.btnEnBoot);
             this.tabPage3.Location = new System.Drawing.Point(4, 22);
             this.tabPage3.Name = "tabPage3";
             this.tabPage3.Padding = new System.Windows.Forms.Padding(3);
@@ -3941,6 +3951,26 @@ namespace tincanbms_cfg
             // 
             this.backgroundWorker1.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker1_DoWork);
             // 
+            // btnEnBoot
+            // 
+            this.btnEnBoot.Location = new System.Drawing.Point(18, 18);
+            this.btnEnBoot.Name = "btnEnBoot";
+            this.btnEnBoot.Size = new System.Drawing.Size(116, 23);
+            this.btnEnBoot.TabIndex = 0;
+            this.btnEnBoot.Text = "Enable BOOT mode";
+            this.btnEnBoot.UseVisualStyleBackColor = true;
+            this.btnEnBoot.Click += new System.EventHandler(this.btnEnBoot_Click);
+            // 
+            // btnExitBoot
+            // 
+            this.btnExitBoot.Location = new System.Drawing.Point(18, 56);
+            this.btnExitBoot.Name = "btnExitBoot";
+            this.btnExitBoot.Size = new System.Drawing.Size(116, 23);
+            this.btnExitBoot.TabIndex = 0;
+            this.btnExitBoot.Text = "Exit BOOT mode";
+            this.btnExitBoot.UseVisualStyleBackColor = true;
+            this.btnExitBoot.Click += new System.EventHandler(this.btnExitBoot_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -4035,6 +4065,7 @@ namespace tincanbms_cfg
             ((System.ComponentModel.ISupportInitialize)(this.conLockoutMinCurr)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.conLockoutUVP)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.modCnt)).EndInit();
+            this.tabPage3.ResumeLayout(false);
             this.tabPage5.ResumeLayout(false);
             this.tabPage5.PerformLayout();
             this.groupBox11.ResumeLayout(false);
@@ -4338,6 +4369,8 @@ namespace tincanbms_cfg
         private System.Windows.Forms.ListView lvLockoutFlags;
         private System.Windows.Forms.ColumnHeader columnHeader4;
         private System.Windows.Forms.ColumnHeader columnHeader5;
+        private System.Windows.Forms.Button btnEnBoot;
+        private System.Windows.Forms.Button btnExitBoot;
     }
 }
 

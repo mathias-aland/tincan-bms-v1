@@ -17,7 +17,9 @@
 #include "bmsmodule.h"
 #include "globals.h"
 #include "i2c.h"
+#include "spi.h"
 #include "systick.h"
+#include "eeprom.h"
 
 enum {
 	MODBUS_STATE_WAITSTART = 0,			// waiting for start character (':')
@@ -311,7 +313,10 @@ uint8_t writeCoil(uint16_t addr, bool data)
 			break;
 		case MODBUS_COIL_SIM_STATUS_WREN:
 			sim_status_wr_en = data;
-			break;			
+			break;
+		case MODBUS_COIL_ENABLE_BOOT:
+			mcp2515_enable_boot(data);
+			break;
 		default:
 			return MODBUS_ERR_ILLEGAL_DATA_ADDR;	// address not found
 	}

@@ -204,9 +204,19 @@ bool check_charger_enable(bool ac_present)
 			// Cell temperature too high
 			charger_state = false;
 		}
+		else if (!charger_state && (batt_stats.temp_max > (bms_limits.chgMaxTemp - (0.5 * TEMP_SCALE))))
+		{
+			// Charger off but temp still inside hysteresis zone
+			charger_state = false;
+		}
 		else if (batt_stats.temp_min < bms_limits.chgMinTemp)
 		{
 			// Cell temperature too low
+			charger_state = false;
+		}		
+		else if (!charger_state && (batt_stats.temp_min < (bms_limits.chgMinTemp + (0.5 * TEMP_SCALE))))
+		{
+			// Charger off but temp still inside hysteresis zone
 			charger_state = false;
 		}
 		else
@@ -284,10 +294,15 @@ bool check_regen_lockout()
 	static bool regen_lockout = false;
 	
 	/* Check if cell temperatures are within limits */
-	if ((batt_stats.temp_max > bms_limits.regenMaxTemp) || (batt_stats.temp_min < bms_limits.regenMinTemp))
+	if ((!regen_lockout) && ((batt_stats.temp_max > bms_limits.regenMaxTemp) || (batt_stats.temp_min < bms_limits.regenMinTemp)))
 	{
-		// Cell temperature outside allowed range
+		// Cell temperature outside allowed range (lockout inactive)
 		regen_lockout = true;
+		regen_timer = SysTick_GetTicks();
+	}
+	else if ((regen_lockout) && ((batt_stats.temp_max > (bms_limits.regenMaxTemp - (0.5 * TEMP_SCALE))) || (batt_stats.temp_min < (bms_limits.regenMinTemp + (0.5 * TEMP_SCALE)))))
+	{
+		// Cell temperature outside allowed range (lockout active)
 		regen_timer = SysTick_GetTicks();
 	}
 	else if (batt_stats.cellVolt_max > bms_limits.regenMaxVolt)

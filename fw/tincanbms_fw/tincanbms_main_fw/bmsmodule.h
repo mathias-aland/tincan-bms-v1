@@ -117,6 +117,7 @@ enum
 	BATT_STATE_GETVALUES_ENABLE_ADC,
 	BATT_STATE_GETVALUES_START_ADC,
 	BATT_STATE_GETVALUES_DISABLE_TEMP,
+	BATT_STATE_GETVALUES_READ_BALSTATE,
 	BATT_STATE_GETVALUES_READ1,
 	BATT_STATE_GETVALUES_READ2,
 	BATT_STATE_INIT,
@@ -396,9 +397,12 @@ void batt_req_clear(uint8_t alertMask, uint8_t faultMask);
 bool batt_status_clear();
 bool batt_result_clear();
 
-void batt_req_setbal(uint8_t pack, uint8_t cells, uint8_t timeout);
-bool batt_bal_pend();
-bool batt_bal_ok();
+//void batt_req_setbal(uint8_t pack, uint8_t cells, uint8_t timeout);
+//bool batt_bal_pend();
+//bool batt_bal_ok();
+
+
+void batt_set_balAllowed(bool balAllowed);
 
 uint16_t batt_get_module_volt(uint8_t modNum);
 uint16_t batt_get_cell_volt(uint8_t modNum, uint8_t cellNum);

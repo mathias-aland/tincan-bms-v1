@@ -19,6 +19,8 @@
 #include <util/crc16.h>
 #include "bmsmodule.h"
 #include "globals.h"
+#include "i2c.h"
+#include "systick.h"
 
 
 #define GUARD_MSEC		10000
@@ -79,7 +81,7 @@ bool batt_clear_alarms_ok = false;
 uint8_t batt_clear_alarms_alertbits = 0;
 uint8_t batt_clear_alarms_faultbits = 0;
 
-
+bool batt_balance_allowed = false;
 bool batt_balance_set_pend = false;
 bool batt_balance_set_ok = false;
 uint8_t batt_balance_pack = 0;
@@ -88,9 +90,9 @@ uint8_t batt_balance_timeout = 0;
 
 volatile uint8_t bat_datacollection_timer;
 
+uint8_t batt_balance_state[MAX_MODULES];
 
 uint32_t data_readouts_done = 0;
-
 
 ISR(TCB1_INT_vect) {
 	
@@ -578,24 +580,25 @@ bool batt_result_clear()
 
 
 
-void batt_req_setbal(uint8_t pack, uint8_t cells, uint8_t timeout)
-{
-	batt_balance_pack = pack;
-	batt_balance_cells = cells;
-	batt_balance_timeout = timeout;
-	batt_balance_set_ok = false;
-	batt_balance_set_pend = true;
-}
+//void batt_req_setbal(uint8_t pack, uint8_t cells, uint8_t timeout)
+//{
+	//batt_balance_pack = pack;
+	//batt_balance_cells = cells;
+	//batt_balance_timeout = timeout;
+	//batt_balance_set_ok = false;
+	//batt_balance_set_pend = true;
+//}
 
-bool batt_bal_pend()
-{
-	return batt_balance_set_pend;
-}
 
-bool batt_bal_ok()
-{
-	return batt_balance_set_ok;
-}
+//bool batt_bal_pend()
+//{
+	//return batt_balance_set_pend;
+//}
+//
+//bool batt_bal_ok()
+//{
+	//return batt_balance_set_ok;
+//}
 
 uint8_t batt_get_module_alerts(uint8_t modNum)
 {
@@ -656,6 +659,191 @@ void set_comm_flt_all()
 		modules[mod].faults |= BATT_FAULT_NOCOMM;		// set comm fault flag
 	}
 }
+
+
+void batt_checkbal()
+{
+	static uint32_t balance_idle_timer = 0;
+	bool balActive = false;
+	
+	// check if any balancing is active
+	for (uint8_t mod=0; mod < numFoundModules; mod++)
+	{
+		if (modules[mod].status & BATT_STATUS_CBT)
+		{
+			balActive = true;
+		}
+	}
+	
+	if (balActive)
+	{
+		balance_idle_timer = SysTick_GetTicks();
+	}
+	else
+	{
+		if (SysTick_CheckElapsed(balance_idle_timer, (uint32_t)bms_limits.balIdleTime * 1000) == false)
+		{
+			// Idle timer not expired
+			balActive = true;
+		}
+	}
+	
+	for (uint8_t mod=0; mod < numFoundModules; mod++)
+	{
+		
+		uint8_t cellsToBalance;
+		
+		if (batt_balance_allowed)
+		{
+			// balancing allowed
+			
+			// check if balancing is already active
+			if (!balActive)
+			{
+				// No balancing active, proceed
+				cellsToBalance = 0;
+			
+				if (batt_stats.cellVolt_max >= bms_limits.balMinVoltage)
+				{
+					// Voltage high enough for balancing
+					for (uint8_t cell = 0; cell < 6; cell++)
+					{
+						if (batt_balance_state[mod] & (1 << cell))
+						{
+							// balancing already active
+							if (modules[mod].cellVolt[cell] > (batt_stats.cellVolt_min + bms_limits.balFinishDelta))
+							{
+								// continue balancing
+								cellsToBalance |= 1 << cell;
+							}
+						}
+						else
+						{
+							// balancing not active
+							if (modules[mod].cellVolt[cell] >= (batt_stats.cellVolt_min + bms_limits.balMaxDelta))
+							{
+								// Balancing this cell is needed
+								cellsToBalance |= 1 << cell;
+							}
+						}
+					}
+				}
+			
+			
+				if ((batt_balance_state[mod] & 0x3f) != cellsToBalance)
+				{
+					// balance state changed, request update
+					batt_balance_state[mod] = 0x80 | cellsToBalance;
+				}
+			}
+		}
+		else
+		{
+			// balancing forbidden, stop all cells
+			if ((batt_balance_state[mod] & 0x3f) != 0)
+			{
+				// balance state changed, request update
+				batt_balance_state[mod] = 0x80;
+			}
+		}
+		
+		
+		// send balance cmd if needed
+		if ((!batt_balance_set_pend) && (batt_balance_state[mod] & 0x80))
+		{
+			batt_balance_pack = mod;
+			batt_balance_set_ok = false;
+			batt_balance_set_pend = true;
+		}
+		
+		
+	}
+}
+
+
+void batt_set_balAllowed(bool balAllowed)
+{
+	batt_balance_allowed = balAllowed;
+}
+
+
+void batt_update_stats()
+{
+	
+	
+	if (numFoundModules == 0)
+	{
+		return;
+	}
+	
+	batt_stats_t batt_stats_tmp;
+	
+	batt_stats_tmp.temp_max = INT16_MIN;
+	batt_stats_tmp.temp_min = INT16_MAX;
+	batt_stats_tmp.cellVolt_max = 0;
+	batt_stats_tmp.cellVolt_min = UINT16_MAX;
+	batt_stats_tmp.moduleFaults = 0;
+	batt_stats_tmp.moduleAlerts = 0;
+	
+
+	for (uint8_t mod=0; mod < numFoundModules; mod++)
+	{
+		//uint8_t alerts, faults, cuv_flt, cov_flt;
+		
+		// check cell voltages
+		for (int cell=0; cell<6; cell++)
+		{
+			uint16_t cellV = modules[mod].cellVolt[cell];
+			
+			// Update cell min/max voltages
+			if (cellV < batt_stats_tmp.cellVolt_min)
+			{
+				batt_stats_tmp.cellVolt_min = cellV;
+			}
+			
+			if (cellV > batt_stats_tmp.cellVolt_max)
+			{
+				batt_stats_tmp.cellVolt_max = cellV;
+			}
+		}
+		
+		// check temperatures
+		for (uint8_t sensor=0; sensor<2; sensor++)
+		{
+			int16_t tempVal = modules[mod].temperatures[sensor];
+			
+			if (tempVal < batt_stats_tmp.temp_min)
+			{
+				batt_stats_tmp.temp_min = tempVal;	// update min temp value
+			}
+			
+			if (tempVal > batt_stats_tmp.temp_max)
+			{
+				batt_stats_tmp.temp_max = tempVal;	// update max temp value
+			}
+		}
+		
+		/* Alerts */
+		batt_stats_tmp.moduleAlerts |= modules[mod].alerts;
+		
+		/* Faults */
+		batt_stats_tmp.moduleFaults |= modules[mod].faults;
+	}
+	
+	// Current
+	batt_stats_tmp.batt_current = comp_mcu_state.i_sense / 10;
+	
+	// Readouts
+	batt_stats_tmp.readOutsCnt = data_readouts_done;
+	
+	// Number of modules
+	batt_stats_tmp.numModulesPresent = numFoundModules;
+	
+	batt_stats = batt_stats_tmp;
+}
+
+
+
 
 void bms_state_machine()
 {
@@ -790,9 +978,9 @@ void bms_state_machine()
 				if (rxStatus == RX_STATUS_OK)
 				{
 					// OK
-					// read data from first module (block 1)
-					batt_state = BATT_STATE_GETVALUES_READ1;
-					batt_read_reg(1, BQ_REG_DEV_STATUS, 19, 3, GUARD_TIME_MIN);
+					// read data from first module (balstate)
+					batt_state = BATT_STATE_GETVALUES_READ_BALSTATE;
+					batt_read_reg(1, BQ_REG_BAL_CTRL, 1, 3, GUARD_TIME_MIN);
 				}
 				else
 				{
@@ -806,6 +994,27 @@ void bms_state_machine()
 				}
 				
 				break;
+				
+				
+			case BATT_STATE_GETVALUES_READ_BALSTATE:
+				// check if operation was successful
+				if (rxStatus == RX_STATUS_OK)
+				{
+					// OK
+					modules[curr_module-1].balState = rxBuf[3];
+				}
+				else
+				{
+					// failed
+					modules[curr_module-1].faults |= BATT_FAULT_NOCOMM;		// set comm fault flag
+				}
+				
+				// read data (block 1)
+				batt_state = BATT_STATE_GETVALUES_READ1;
+				batt_read_reg(curr_module, BQ_REG_DEV_STATUS, 19, 3, GUARD_TIME_MIN);
+			
+				break;
+				
 			case BATT_STATE_GETVALUES_READ1:
 				// check if operation was successful
 				if (rxStatus == RX_STATUS_OK)
@@ -940,6 +1149,16 @@ void bms_state_machine()
 				if (curr_module > numFoundModules)
 				{
 					// finished, all modules read
+					// calculate stats
+					
+					if (simKey != SIM_MODE_KEY)
+					{
+						batt_update_stats();	// update battery stats (min/max temp, faults etc)
+						batt_checkbal();		// run cell balance logic
+					}
+					
+					
+					
 					// TODO: notify
 						
 					//set_wait_ms(500);
@@ -950,9 +1169,9 @@ void bms_state_machine()
 				else
 				{
 					// still data left to read
-					// read data (block 1)
-					batt_state = BATT_STATE_GETVALUES_READ1;
-					batt_read_reg(curr_module, BQ_REG_DEV_STATUS, 19, 3, GUARD_TIME_MIN);
+					// read data (balstate)
+					batt_state = BATT_STATE_GETVALUES_READ_BALSTATE;
+					batt_read_reg(curr_module, BQ_REG_BAL_CTRL, 1, 3, GUARD_TIME_MIN);
 				}
 				
 				break;			
@@ -1131,7 +1350,7 @@ void bms_state_machine()
 			case BATT_STATE_SET_BALANCE:
 				
 				
-				if ((numFoundModules == 0) || (batt_balance_pack == 0) || (batt_balance_pack > numFoundModules))
+				if ((numFoundModules == 0) || (batt_balance_pack >= numFoundModules))
 				{
 					batt_balance_set_ok = false;
 					batt_balance_set_pend = false;
@@ -1140,7 +1359,7 @@ void bms_state_machine()
 				else
 				{
 					// set balance timer in selected module
-					batt_write_reg(batt_balance_pack, BQ_REG_BAL_TIME, batt_balance_timeout, 3, GUARD_TIME_MIN);
+					batt_write_reg(batt_balance_pack+1, BQ_REG_BAL_TIME, bms_limits.balInterval, 3, GUARD_TIME_MIN);
 					batt_state = BATT_STATE_SET_BALANCE_2;
 				}
 				break;
@@ -1153,7 +1372,7 @@ void bms_state_machine()
 				if (rxStatus == RX_STATUS_OK)
 				{
 					// OK, reset balance outputs to 0
-					batt_write_reg(batt_balance_pack, BQ_REG_BAL_CTRL, 0, 3, GUARD_TIME_MIN);
+					batt_write_reg(batt_balance_pack+1, BQ_REG_BAL_CTRL, 0, 3, GUARD_TIME_MIN);
 					batt_state = BATT_STATE_SET_BALANCE_3;
 				}
 				else
@@ -1175,17 +1394,17 @@ void bms_state_machine()
 					// OK, set balance outputs
 					
 					
-					if (batt_balance_cells == 0)
+					if ((batt_balance_state[batt_balance_pack] & 0x3f) == 0)
 					{
 						// No cells to balance, we are done here
-						modules[batt_balance_pack-1].balState = 0;
+						batt_balance_state[batt_balance_pack] &= ~0x80;	// Clear pending bit
 						batt_balance_set_ok = true;
 						batt_balance_set_pend = false;
 						batt_state = BATT_STATE_IDLE;
 					}
 					else
 					{
-						batt_write_reg(batt_balance_pack, BQ_REG_BAL_CTRL, batt_balance_cells, 3, GUARD_TIME_MIN);
+						batt_write_reg(batt_balance_pack+1, BQ_REG_BAL_CTRL, batt_balance_state[batt_balance_pack], 3, GUARD_TIME_MIN);
 						batt_state = BATT_STATE_SET_BALANCE_4;
 					}
 					
@@ -1205,7 +1424,7 @@ void bms_state_machine()
 				if (rxStatus == RX_STATUS_OK)
 				{
 					// OK
-					modules[batt_balance_pack-1].balState = batt_balance_cells;
+					batt_balance_state[batt_balance_pack] &= ~0x80;	// Clear pending bit
 					batt_balance_set_ok = true;
 				}
 				else

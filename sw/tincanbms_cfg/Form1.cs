@@ -198,6 +198,12 @@ namespace tincanbms_cfg
         bool writeCfgPend = false;
         bool saveCfgPend = false;
 
+        bool enableBootPend = false;
+        bool exitBootPend = false;
+
+
+        bool bootEnabled = false;
+
         List<simData> simDataList = new List<simData>();
 
 
@@ -729,6 +735,114 @@ namespace tincanbms_cfg
 
             while (exitPend == false)
             {
+                if ((enableBootPend) && (!bootEnabled))
+                {
+
+                    try
+                    {
+                        serialPort1.Write(":00050007FF00F5\r\n");
+                        bootEnabled = true;
+
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Invoke((MethodInvoker)delegate
+                        {
+                            // Run on UI thread:
+                            MessageBox.Show("Error: " + ex.Message, "Enable BOOT mode", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        });
+                    }
+
+                    enableBootPend = false;
+
+                    this.Invoke((MethodInvoker)delegate
+                    {
+                        // Run on UI thread:
+                        btnEnBoot.Enabled = true;
+                    });
+
+
+
+
+                    Thread.Sleep(100);
+                    continue;
+                }
+
+                if (bootEnabled)
+                {
+                    if (exitBootPend)
+                    {
+
+                        if (serialPort1.IsOpen)
+                            serialPort1.Close();
+
+                        Thread.Sleep(100);
+
+                        updi updi1 = new updi(Properties.Settings.Default.com_port, true);
+
+                        try
+                        {
+
+                            updi1.open();
+
+                            updi1.updi_link_init();
+                            updi1.updi_cpu_reset();
+
+                            updi1.close();
+
+                            Thread.Sleep(5000);
+
+                            bootEnabled = false;
+
+                        }
+                        catch (Exception ex)
+                        {
+                            updi1.close();
+
+                            this.Invoke((MethodInvoker)delegate
+                            {
+                                // Run on UI thread:
+                                MessageBox.Show("Error: " + ex.Message, "Exit BOOT mode", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            });
+                        }
+
+
+                        try
+                        {
+
+                            serialPort1.NewLine = "\r\n";
+                            serialPort1.PortName = Properties.Settings.Default.com_port;
+
+                            serialPort1.Open();
+
+                            serialPort1.WriteTimeout = 1000;
+
+
+                        }
+                        catch (Exception ex)
+                        {
+                            this.Invoke((MethodInvoker)delegate
+                            {
+                                // Run on UI thread:
+                                MessageBox.Show("Error: " + ex.Message, "Init COM port", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            });
+                        }
+
+
+                        exitBootPend = false;
+
+                        this.Invoke((MethodInvoker)delegate
+                        {
+                            // Run on UI thread:
+                            btnExitBoot.Enabled = true;
+                        });
+
+                    }
+
+                    Thread.Sleep(100);
+                    continue;
+                }
+
 
                 if (battInitPend)
                 {
@@ -2376,6 +2490,18 @@ namespace tincanbms_cfg
                     MessageBox.Show("Error: " + ex.Message, "Export parameters", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private void btnEnBoot_Click(object sender, EventArgs e)
+        {
+            btnEnBoot.Enabled = false;
+            enableBootPend = true;
+        }
+
+        private void btnExitBoot_Click(object sender, EventArgs e)
+        {
+            btnExitBoot.Enabled = false;
+            exitBootPend = true;
         }
     }
 }
