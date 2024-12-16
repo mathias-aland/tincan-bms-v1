@@ -56,7 +56,6 @@ volatile uint8_t retries = 0;
 volatile static uint16_t wait_ms = 0;
 volatile uint16_t guard_time = 0;
 
-
 volatile uint8_t rxBuf[RXBUF_SIZE];
 volatile uint8_t rxBuf_cnt = 0;	// number of bytes received
 volatile uint8_t rxBuf_len = 0;	// number of bytes to receive
@@ -93,6 +92,8 @@ volatile uint8_t bat_datacollection_timer;
 uint8_t batt_balance_state[MAX_MODULES];
 
 uint32_t data_readouts_done = 0;
+
+const __flash uint16_t bal_corr_lut[] = {6250, 6228, 6380, 6313, 6228, 6207, 6313, 6291};
 
 ISR(TCB1_INT_vect) {
 	
@@ -253,8 +254,8 @@ ISR(USART1_RXC_vect) {
 		{
 			rxCrc = 0;	// clear CRC
 			
-			// check if blocking bit is set
-			if (rxData & 0x80)
+			// check if blocking bit is set in reply but not in TX buffer
+			if ((rxData & 0x80) && (!(txBuf[0] & 0x80)))
 			{
 				rxBlockBit = true;
 				rxData &= 0x7f;
@@ -470,6 +471,28 @@ void start_tx()
 	
 }
 
+
+bool batt_exit_boot()
+{
+	if (txStatus != COMM_STATUS_IDLE)
+	{
+		// transfer already in progress
+		return false;
+	}
+	
+	// Magic bytes to force bootloader exit
+	txBuf[0] = 0x81;
+	txBuf[1] = 0x8A;
+	txBuf[2] = 0x85;
+	txBuf[3] = 0x88;
+	txBuf_len = 4;			// send 4 bytes
+	retries = 3;
+	guard_time = 50000;	// 5 ms to allow boot-up
+	
+	start_tx();
+	
+	return true;
+}
 
 
 bool batt_write_reg(uint8_t devAddr, uint8_t regAddr, uint8_t value, uint8_t retry_cnt, uint16_t guardTime)
@@ -730,9 +753,10 @@ void batt_checkbal()
 				}
 			
 			
-				if ((batt_balance_state[mod] & 0x3f) != cellsToBalance)
+				//if ((batt_balance_state[mod] & 0x3f) != cellsToBalance)
+				if (cellsToBalance != 0)
 				{
-					// balance state changed, request update
+					// request balance start
 					batt_balance_state[mod] = 0x80 | cellsToBalance;
 				}
 			}
@@ -1032,12 +1056,43 @@ void bms_state_machine()
 								
 					uint32_t totVolt = 0;
 								
+					//for (uint8_t cell = 0; cell < 6; cell++)
+					//{
+						//totVolt += ((uint16_t)rxBuf[6 + (cell * 2)] * 256 + rxBuf[7 + (cell * 2)]);
+									//
+						//modules[curr_module-1].cellVolt[cell] = ((uint32_t)((uint16_t)rxBuf[6 + (cell * 2)] * 256 + rxBuf[7 + (cell * 2)]) * 6250) / 16383;	// Vcell in mV
+					//}
+					
+					
+					
+					uint16_t mult;
+					
+					
+					
 					for (uint8_t cell = 0; cell < 6; cell++)
 					{
 						totVolt += ((uint16_t)rxBuf[6 + (cell * 2)] * 256 + rxBuf[7 + (cell * 2)]);
-									
-						modules[curr_module-1].cellVolt[cell] = ((uint32_t)((uint16_t)rxBuf[6 + (cell * 2)] * 256 + rxBuf[7 + (cell * 2)]) * 6250) / 16383;	// Vcell in mV
+						
+						// Do cell balance compensation
+						mult = modules[curr_module-1].balState;
+						mult <<= 1;
+						mult >>= cell;
+						mult = bal_corr_lut[mult & 0x7];
+						
+						//mult = bal_corr_lut[0];
+						//mult = bal_corr_lut[((modules[curr_module-1].balState << 1) >> cell) & 0x7];
+						
+						
+						modules[curr_module-1].cellVolt[cell] = ((uint32_t)((uint16_t)rxBuf[6 + (cell * 2)] * 256 + rxBuf[7 + (cell * 2)]) * mult) / 16383;	// Vcell in mV
 					}
+					
+					
+					
+					
+					
+					
+					
+					
 								
 								
 					//totVolt *= 6250;
@@ -1151,6 +1206,8 @@ void bms_state_machine()
 					// finished, all modules read
 					// calculate stats
 					
+					data_readouts_done++;
+					
 					if (simKey != SIM_MODE_KEY)
 					{
 						batt_update_stats();	// update battery stats (min/max temp, faults etc)
@@ -1162,7 +1219,6 @@ void bms_state_machine()
 					// TODO: notify
 						
 					//set_wait_ms(500);
-					data_readouts_done++;
 						
 					batt_state = BATT_STATE_IDLE;
 				}
@@ -1404,7 +1460,7 @@ void bms_state_machine()
 					}
 					else
 					{
-						batt_write_reg(batt_balance_pack+1, BQ_REG_BAL_CTRL, batt_balance_state[batt_balance_pack], 3, GUARD_TIME_MIN);
+						batt_write_reg(batt_balance_pack+1, BQ_REG_BAL_CTRL, batt_balance_state[batt_balance_pack] & 0x3f, 3, GUARD_TIME_MIN);
 						batt_state = BATT_STATE_SET_BALANCE_4;
 					}
 					

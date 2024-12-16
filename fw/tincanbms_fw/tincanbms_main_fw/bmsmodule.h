@@ -420,7 +420,7 @@ uint8_t batt_get_module_bal(uint8_t modNum);
 uint32_t batt_get_total_readouts();
 
 
-
+bool batt_exit_boot();
 
 
 

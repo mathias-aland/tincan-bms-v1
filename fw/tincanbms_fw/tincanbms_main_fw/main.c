@@ -472,11 +472,17 @@ uint8_t mainLogic_idle()
 			if (!(WDT.STATUS & WDT_SYNCBUSY_bm))
 			{
 				// WDT sync done
-				PORTD.OUTSET = 0x04;	// allow contactor ON (main)
-				contactor_enable(0xa3); // allow contactor ON (comp)
+				// allow contactor ON (comp)
+				if (contactor_enable(0xa3))
+				{
+					// OK
+					PORTD.OUTSET = 0x04;	// allow contactor ON (main)
 		
-				contactor_timer = SysTick_GetTicks();
-				cont_step = 2;	
+					contactor_timer = SysTick_GetTicks();
+					cont_step = 2;						
+				}
+				
+
 			}
 		}
 		
@@ -579,8 +585,12 @@ uint8_t mainLogic_idle()
 		}
 		else if (cont_step != 0)
 		{
-			contactor_enable(0x00);		// disallow contactor ON (comp)
-			cont_step = 255;
+			// disallow contactor ON (comp)
+			if (contactor_enable(0x00))
+			{
+				// OK
+				cont_step = 255;
+			}
 		}
 	}
 	
@@ -655,8 +665,11 @@ uint8_t mainLogic_idle()
 	
 	if (outputState != newOutputState)
 	{
-		outputState = newOutputState;
-		set_outputs(newOutputState, bms_limits.pumpFreqPWM, bms_limits.pumpDutyPWM, bms_limits.pumpDutyPWM);
+		if (set_outputs(newOutputState, bms_limits.pumpFreqPWM, (bms_limits.pumpDutyPWM * 255)/100, (bms_limits.pumpDutyPWM * 255)/100))
+		{
+			// successful
+			outputState = newOutputState;
+		}
 	}
 	
 	return MAIN_STATE_IDLE;
@@ -797,7 +810,7 @@ int main(void) {
      
      PORTD.OUTSET = 0x40;
      
-     _delay_ms(4000);
+     _delay_ms(500);
      
      
      /* --- ADC init --- */
@@ -922,8 +935,16 @@ int main(void) {
 		
 		//contactor_enable(0xa3); // allow contactor ON
 		
+		
+		
 		set_outputs(0, bms_limits.pumpFreqPWM, (bms_limits.pumpDutyPWM * 255)/100, (bms_limits.pumpDutyPWM * 255)/100);
 		contactor_enable(0x00);		// disallow contactor ON (comp)
+		
+		//_delay_ms(100);
+		
+		batt_exit_boot();
+		
+		_delay_ms(100);
 		
 		batt_req_init();
 		batt_req_clear(0xEF, 0x2F);	// Init has higher priority and will run to completion before starting alarm clear
